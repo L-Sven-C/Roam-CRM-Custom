@@ -66,14 +66,15 @@ function parseStringToDate(dateString) {
     for (const formatString of dateFormats) {
         const date = parse(normalizedDateString, formatString, new Date());
         if (isValid(date)) {
-            // Convert the parsed date to UTC
-            const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            // Create a new date with only year, month, day components (no time)
+            // This ensures we're working with local midnight
+            const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
             // If the parsed date doesn't have a year, set it to the current year
             if (!formatString.includes('yyyy')) {
-                return setYear(utcDate, new Date().getUTCFullYear());
+                return setYear(localDate, new Date().getFullYear());
             }
-            return utcDate;
+            return localDate;
         }
     }
 
@@ -253,21 +254,24 @@ function checkBirthdays(person) {
         return { aAndBBirthdaysToday: null, otherBirthdaysToday: null, filteredUpcomingBirthdays: null };
     }
 
+    // Get today's date at local midnight (no time component)
     const now = new Date();
-    const utcToday = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
+    // Get the person's birthday as a Date object
     const personBirthday = new Date(person.birthday);
-    const utcPersonBirthday = Date.UTC(personBirthday.getUTCFullYear(), personBirthday.getUTCMonth(), personBirthday.getUTCDate());
-
-    const currentYear = new Date(utcToday).getUTCFullYear();
-    let utcBirthdayThisYear = Date.UTC(currentYear, personBirthday.getUTCMonth(), personBirthday.getUTCDate());
+    
+    // Create a date for this year's birthday using local time
+    const currentYear = today.getFullYear();
+    let birthdayThisYear = new Date(currentYear, personBirthday.getMonth(), personBirthday.getDate());
 
     // If the birthday has already passed this year, look at next year's birthday
-    if (utcBirthdayThisYear < utcToday) {
-        utcBirthdayThisYear = Date.UTC(currentYear + 1, personBirthday.getUTCMonth(), personBirthday.getUTCDate());
+    if (birthdayThisYear < today) {
+        birthdayThisYear = new Date(currentYear + 1, personBirthday.getMonth(), personBirthday.getDate());
     }
 
-    const daysDiff = Math.floor((utcBirthdayThisYear - utcToday) / MS_PER_DAY);
+    // Calculate days until birthday using timestamps and convert to days
+    const daysDiff = Math.floor((birthdayThisYear.getTime() - today.getTime()) / MS_PER_DAY);
 
     if (daysDiff === 0) {
         // Birthday is today
@@ -396,20 +400,21 @@ function fixPersonJSON(person) {
 }
 
 export function calculateAge(birthdateInput) {
+    // Get today's date with no time component (local midnight)
     const today = new Date();
-    const utcToday = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+    const localToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
     let parsedBirthDate;
 
     if (typeof birthdateInput === 'string') {
         parsedBirthDate = parseStringToDate(birthdateInput.trim());
     } else if (birthdateInput instanceof Date) {
-        // Ensure the birthdate is also in UTC
-        parsedBirthDate = new Date(Date.UTC(birthdateInput.getUTCFullYear(), birthdateInput.getUTCMonth(), birthdateInput.getUTCDate()));
+        // Ensure the birthdate has no time component (local midnight)
+        parsedBirthDate = new Date(birthdateInput.getFullYear(), birthdateInput.getMonth(), birthdateInput.getDate());
     } else if (typeof birthdateInput === 'number') {
         // Handle timestamp input
-        parsedBirthDate = new Date(birthdateInput);
-        parsedBirthDate = new Date(Date.UTC(parsedBirthDate.getUTCFullYear(), parsedBirthDate.getUTCMonth(), parsedBirthDate.getUTCDate()));
+        const dateFromTimestamp = new Date(birthdateInput);
+        parsedBirthDate = new Date(dateFromTimestamp.getFullYear(), dateFromTimestamp.getMonth(), dateFromTimestamp.getDate());
     } else {
         console.error("Invalid birthdate format");
         return "?";
@@ -419,7 +424,7 @@ export function calculateAge(birthdateInput) {
         return "?";
     }
 
-    const age = differenceInYears(utcToday, parsedBirthDate);
+    const age = differenceInYears(localToday, parsedBirthDate);
 
     return age === 0 ? "?" : age;
 }

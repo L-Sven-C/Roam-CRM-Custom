@@ -328,8 +328,31 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
     // Get previously stored calendar events from extension settings
     const storedEvents = getExtensionAPISetting(extensionAPI, "synced-cal-events", {})
 
+    // Log detailed sync state for debugging
+    console.log(`Calendar sync requested - Settings state:`, {
+        syncInProgress: getExtensionAPISetting(extensionAPI, "sync-in-progress", false),
+        lastSyncTime: new Date(getExtensionAPISetting(extensionAPI, "last-sync-time", 0)),
+        syncStartTime: getExtensionAPISetting(extensionAPI, "sync-start-time", null) ? 
+            new Date(getExtensionAPISetting(extensionAPI, "sync-start-time", 0)) : null,
+        testingMode: testing,
+        manualSync: isManualSync,
+        triggerSource
+    });
+
+    // Check for stale sync flag (more than 10 minutes old)
+    const currentSyncStarted = getExtensionAPISetting(extensionAPI, "sync-start-time", null);
+    const now = Date.now();
+    if (getExtensionAPISetting(extensionAPI, "sync-in-progress", false) && currentSyncStarted) {
+        const syncDuration = now - currentSyncStarted;
+        // If sync has been "in progress" for more than 10 minutes, it's likely stuck
+        if (syncDuration > 10 * 60 * 1000) {
+            console.warn(`Stale sync detected (running for ${Math.round(syncDuration/60000)} minutes). Resetting sync status.`);
+            extensionAPI.settings.set("sync-in-progress", false);
+        }
+    }
+
     // Check if sync is in progress
-    if (extensionAPI.settings.get("sync-in-progress")) {
+    if (getExtensionAPISetting(extensionAPI, "sync-in-progress", false)) {
         console.error('Sync already in progress')
         return
     }
@@ -348,6 +371,7 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
 
     try {
         extensionAPI.settings.set("sync-in-progress", true)
+        extensionAPI.settings.set("sync-start-time", Date.now())
         console.group(`Calendar Sync Start [${triggerSource}]:`, new Date().toISOString())
 
         // Track emails with auth issues and events that don't need updates
@@ -604,8 +628,35 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
             showToast(`Error syncing calendar: ${err.message}`, "DANGER")
         }
     } finally {
-        extensionAPI.settings.set("sync-in-progress", false)
-        extensionAPI.settings.set("last-sync-time", Date.now())
+        // Make sure this always runs, even if there are nested errors
+        try {
+            extensionAPI.settings.set("sync-in-progress", false)
+            extensionAPI.settings.set("last-sync-time", Date.now())
+            console.log('Sync completed, flags reset successfully')
+        } catch (finallyError) {
+            console.error("Error while resetting sync status:", finallyError)
+            // Last resort - try using direct API to reset flag
+            try {
+                // Try first with roamAlphaAPI approach
+                window.roamAlphaAPI.data.graph.settings.set(
+                    "ext/roam-crm/sync-in-progress", 
+                    false
+                )
+                console.log('Sync flags reset using direct API method')
+            } catch (e) {
+                console.error("Critical failure resetting sync flag with primary method:", e)
+                
+                // Ultimate fallback - try localStorage
+                try {
+                    const graphName = window.roamAlphaAPI.graph.name || "unknown-graph";
+                    const localStorageKey = `roam/depot/roam-crm/${graphName}/sync-in-progress`;
+                    localStorage.setItem(localStorageKey, "false");
+                    console.log('Emergency sync flag reset using localStorage');
+                } catch (finalError) {
+                    console.error("All sync flag reset methods failed:", finalError);
+                }
+            }
+        }
         console.groupEnd()
     }
 }
