@@ -574,9 +574,8 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
 
                 // Check if this is a single person event (just the organizer)
                 // Critically: Google Calendar doesn't explicitly include the organizer in all cases
-                const isSingleAttendeeEvent = attendees.length === 0 ||
-                    (attendees.length === 1 && (attendees[0].self === true || attendees[0].organizer === true)) ||
-                    !attendees.some(a => !a.self && !a.organizer); // No external attendees
+                const isSingleAttendeeEvent = attendees.length === 0 || 
+                                            attendees.every(a => a.organizer === true);
 
                 // Log single-attendee events for reference
                 if (isSingleAttendeeEvent) {
@@ -680,9 +679,8 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
         console.log('=== TESTING MODE: Force template generation ===');
 
         // Determine if this is a single-person event
-        const isSingleAttendeeEvent = attendees.length === 0 ||
-            (attendees.length === 1 && (attendees[0].self === true || attendees[0].organizer === true)) ||
-            !attendees.some(a => !a.self && !a.organizer);
+        const isSingleAttendeeEvent = attendees.length === 0 || 
+                                      attendees.every(a => a.organizer === true);
 
         // Check if this is a birthday event or all-day event
         const isBirthdayEvent = result.event.summary &&
@@ -1014,8 +1012,6 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
 }
 
 // MARK: create event block
-// Modified createEventBlocks function for Phase 2 implementation
-// This function will need to replace the existing createEventBlocks function in utils_gcal.js
 
 function createEventBlocks(event, attendees, people, extensionAPI) {
     let calendar = event.calendar || null
@@ -1027,6 +1023,9 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
     let useSmartblock = false
     let smartblockUid = null
 
+    console.log('=== RAW EVENT DEBUGGING ===');
+    console.log('Event data:', event);
+    
     attendees = attendees.filter((attendee) => attendee.email !== calendar)
     attendees.forEach((a) => {
         let name = findPersonNameByEmail(people, a.email)
