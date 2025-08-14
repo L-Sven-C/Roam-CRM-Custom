@@ -402,6 +402,40 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
             return
         }
 
+        // Log all received events for debugging
+        console.log('=== ALL RECEIVED EVENTS DEBUG ===')
+        console.log(`Total events received: ${results.length}`)
+        
+        // Group events by calendar for easier analysis
+        const eventsByCalendar = {}
+        results.forEach((result, index) => {
+            const calendar = result.event?.calendar || 'unknown'
+            const eventId = result.event?.id || 'no-id'
+            const summary = result.event?.summary || 'no-summary'
+            const organizer = result.event?.organizer?.email || 'no-organizer'
+            
+            if (!eventsByCalendar[calendar]) {
+                eventsByCalendar[calendar] = []
+            }
+            
+            eventsByCalendar[calendar].push({
+                index,
+                eventId,
+                summary,
+                organizer,
+                attendeeCount: result.event?.attendees?.length || 0
+            })
+        })
+        
+        // Log summary by calendar
+        Object.keys(eventsByCalendar).forEach(calendar => {
+            console.log(`📅 Calendar: ${calendar} (${eventsByCalendar[calendar].length} events)`)
+            eventsByCalendar[calendar].forEach(event => {
+                console.log(`  - "${event.summary}" (ID: ${event.eventId}, Organizer: ${event.organizer}, Attendees: ${event.attendeeCount})`)
+            })
+        })
+        console.log('=== END RECEIVED EVENTS DEBUG ===');
+
         // Build sets of current event IDs from the fetched events
         const allCurrentEventIds = new Set()
         const createUpdateEventIds = new Set()
@@ -538,19 +572,25 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
             try {
                 // Make sure event and id exist before proceeding
                 if (!result.event || !result.event.id) {
+                    console.log('⚠️ Skipping event: missing event or id')
                     continue;
                 }
 
                 const eventId = result.event.id
+                const eventSummary = result.event.summary || 'no-summary'
+
+                console.log(`🔍 Processing event: "${eventSummary}" (ID: ${eventId})`)
 
                 // Skip processing past events (not in create/update window)
                 // But always process events in testing mode
                 if (eventId && !createUpdateEventIds.has(eventId) && !testing) {
+                    console.log(`⏭️ Skipping past event: "${eventSummary}" (not in create/update window)`)
                     continue;
                 }
 
                 // Log duplicate processing attempts
                 if (processed_events.has(eventId)) {
+                    console.log(`⏭️ Skipping duplicate: "${eventSummary}" (already processed)`)
                     continue
                 }
                 processed_events.add(eventId)
@@ -575,7 +615,7 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
                 // Check if this is a single person event (just the organizer)
                 // Critically: Google Calendar doesn't explicitly include the organizer in all cases
                 const isSingleAttendeeEvent = attendees.length === 0 || 
-                                            attendees.every(a => a.organizer === true);
+                                            attendees.every(a => a.self === true || a.organizer === true);
 
                 // Log single-attendee events for reference
                 if (isSingleAttendeeEvent) {
@@ -680,7 +720,7 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
 
         // Determine if this is a single-person event
         const isSingleAttendeeEvent = attendees.length === 0 || 
-                                      attendees.every(a => a.organizer === true);
+                                      attendees.every(a => a.self === true || a.organizer === true);
 
         // Check if this is a birthday event or all-day event
         const isBirthdayEvent = result.event.summary &&
@@ -905,9 +945,11 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
 
         // If headerString is empty, it's a signal to skip creating this block
         if (!headerString) {
-            console.warn(`Skipping block creation for "${result.event.summary}" (empty header string)`);
+            console.warn(`⏭️ Skipping block creation for "${result.event.summary}" (empty header string)`);
             return;
         }
+
+        console.log(`✅ Creating new block for "${result.event.summary}"`);
 
         // Generate unique ID for new block
         let blockUID = window.roamAlphaAPI.util.generateUID()
@@ -1014,6 +1056,9 @@ async function updateEventBlocks(storedEvent, result, attendees, people, extensi
 // MARK: create event block
 
 function createEventBlocks(event, attendees, people, extensionAPI) {
+    console.log(`📝 createEventBlocks called for: "${event.summary}" (Calendar: ${event.calendar})`)
+    console.log('Attendees passed to createEventBlocks:', attendees.map(a => ({ email: a.email, self: a.self, organizer: a.organizer })))
+    
     let calendar = event.calendar || null
     let headerString
     let childrenBlocks = []
@@ -1026,6 +1071,11 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
     console.log('=== RAW EVENT DEBUGGING ===');
     console.log('Event data:', event);
     
+    // Preserve original attendees for accurate single-person detection
+    // This fixes the bug where invited events were misclassified as single-person events
+    const originalAttendees = [...attendees];
+    
+    // Filter out calendar owner for processing attendee names and notifications
     attendees = attendees.filter((attendee) => attendee.email !== calendar)
     attendees.forEach((a) => {
         let name = findPersonNameByEmail(people, a.email)
@@ -1078,9 +1128,20 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
 
     // Determine if this is a single-person event (just me/myself)
     // Google Calendar API quirk: if it's just you, attendees might be empty or have just you
-    const isSinglePersonEvent = attendeeNames.length === 0 ||
-        (attendees.length === 1 && (attendees[0].self === true || attendees[0].organizer === true)) ||
-        !attendees.some(a => !a.self && !a.organizer);
+    // FIXED: Use original attendees before filtering to correctly classify invited events
+    // An event is single-person if:
+    // 1. No attendees at all, OR
+    // 2. Exactly 1 attendee who is self or organizer, OR  
+    // 3. All attendees are the same person (both self AND organizer)
+    const isSinglePersonEvent = originalAttendees.length === 0 ||
+        (originalAttendees.length === 1 && (originalAttendees[0].self === true || originalAttendees[0].organizer === true)) ||
+        originalAttendees.every(a => a.self === true && a.organizer === true);
+
+    console.log('=== SINGLE-PERSON EVENT DETECTION DEBUG ===');
+    console.log('Original attendees count:', originalAttendees.length);
+    console.log('Filtered attendees count:', attendees.length);
+    console.log('Classified as single-person event:', isSinglePersonEvent);
+    console.log('Event summary:', event.summary);
 
     // For single-person events, we need to find at least one matching keyword
     // that is specifically configured to work with single-person events
@@ -1188,6 +1249,15 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
         smartblockUid: smartblockUid
     });
     console.log("")
+
+    console.log(`📤 createEventBlocks returning for "${event.summary}":`, {
+        hasHeaderString: !!headerString,
+        headerString: headerString || '(empty)',
+        childrenCount: childrenBlocks.length,
+        useSmartblock,
+        smartblockUid,
+        matchedKeyword: matchedKeyword?.term || 'none'
+    });
 
     return { headerString, childrenBlocks, useSmartblock, smartblockUid };
 }
