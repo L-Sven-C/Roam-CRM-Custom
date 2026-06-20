@@ -7,7 +7,7 @@ This fork is based on [8bitgentleman/roam-depot-Roam-CRM](https://github.com/8bi
 ## Usage Example
 
 > **NOTE**  
-> This fork defaults to lowercase, singular CRM fields. The minimum contact marker is `metadata::` with `tag:: #person`; Agenda Addr defaults to `#agenda` and `agenda::`. These core field names can be changed in **Schema Settings**.
+> This fork defaults to the custom metadata structure. The minimum contact marker is `[[metadata]]` with a direct child `category:: #person`; Agenda Addr defaults to `#agenda` and a separate `agenda::` block. These core field names can be changed in **Schema Settings**.
 
 ## Setup
 
@@ -23,7 +23,7 @@ Roam CRM is built on top of several Roam extensions. Please install them on Roam
 
     1. Install Workbench extension and enable the `Attribute Select` feature
     2. Navigate to the newly created page in your graph `[[roam/js/attribute-select]]`
-    3. Add the attribute `Contact Frequency`
+    3. Add the attribute `contact frequency`
     4. Add these five options
         - `#[[A List]]`: Contact every two weeks
         - `#[[B List]]`: Contact every two months
@@ -41,7 +41,39 @@ Roam CRM is built on top of several Roam extensions. Please install them on Roam
 
 ### Metadata
 
--   Roam CRM Custom recognizes each contact through the configured person marker. By default, a contact page needs `metadata::` with a child block `tag:: #person`. This metadata and its structure is important, **without this structure Roam CRM will not work.**
+-   Roam CRM Custom recognizes each contact through the configured person marker. By default, a contact page needs `[[metadata]]` with a direct child block `category:: #person`. This metadata and its structure is important, **without this structure Roam CRM will not work.**
+-   The default person template is:
+
+```roam
+- [[metadata]]
+    - category:: #person
+    - tag::
+    - birthday::
+    - location::
+    - [[contact]]
+        - phone number::
+        - email::
+        - social media::
+        - contact frequency:: #[[C List]]
+        - last contacted::
+    - [[work]]
+        - company::
+        - role::
+        - history::
+    - [[relationship]]
+        - love::
+        - family::
+        - pet::
+        - others::
+    - [[background]]
+        - how we met::
+        - growth::
+        - preference::
+    - current interest::
+    - ask me about::
+    - last reviewed::
+- agenda::
+```
 -   Each person page must have metadata structure which looks like this. You can use the **Person Metadata Template** button in the Roam CRM settings to import a quick Roam template for this metadata structure
     -   <img src="https://github.com/8bitgentleman/roam-depot-Roam-CRM/raw/main/images/metadata.png" width="300"></img>
         <!-- FIXME UPDATE IMAGE PATH ONCE MERGED-->

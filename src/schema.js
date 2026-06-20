@@ -2,9 +2,9 @@ export const CRM_SCHEMA_SETTING_KEY = "crm-schema"
 
 export const DEFAULT_CRM_SCHEMA = {
     personTagPage: "person",
-    tagAttribute: "tag",
+    tagAttribute: "category",
     metadataAttribute: "metadata",
-    relationshipMetadataAttribute: "relationship metadata",
+    contactPage: "contact",
     birthdayAttribute: "birthday",
     lastContactedAttribute: "last contacted",
     contactFrequencyAttribute: "contact frequency",
@@ -18,9 +18,9 @@ export const DEFAULT_CRM_SCHEMA = {
 
 export const CRM_SCHEMA_FIELDS = [
     { key: "personTagPage", label: "Person tag page" },
-    { key: "tagAttribute", label: "Tag attribute" },
-    { key: "metadataAttribute", label: "Metadata attribute" },
-    { key: "relationshipMetadataAttribute", label: "Relationship metadata attribute" },
+    { key: "tagAttribute", label: "Person marker attribute" },
+    { key: "metadataAttribute", label: "Metadata page" },
+    { key: "contactPage", label: "Contact section page" },
     { key: "birthdayAttribute", label: "Birthday attribute" },
     { key: "lastContactedAttribute", label: "Last contacted attribute" },
     { key: "contactFrequencyAttribute", label: "Contact frequency attribute" },
@@ -34,8 +34,6 @@ export const CRM_SCHEMA_FIELDS = [
 
 const ATTRIBUTE_KEYS = new Set([
     "tagAttribute",
-    "metadataAttribute",
-    "relationshipMetadataAttribute",
     "birthdayAttribute",
     "lastContactedAttribute",
     "contactFrequencyAttribute",
@@ -45,7 +43,7 @@ const ATTRIBUTE_KEYS = new Set([
     "nextActionsAttribute",
 ])
 
-const PAGE_KEYS = new Set(["personTagPage", "agendaPage", "callPage"])
+const PAGE_KEYS = new Set(["personTagPage", "metadataAttribute", "contactPage", "agendaPage", "callPage"])
 
 function stripRoamPageSyntax(value) {
     return value
@@ -81,9 +79,18 @@ export function normalizeCRMSchema(schema) {
 
 export function getCRMSchema(extensionAPI) {
     const savedSchema = extensionAPI?.settings?.get(CRM_SCHEMA_SETTING_KEY)
-    return normalizeCRMSchema({
+    const savedSchemaObject = savedSchema && typeof savedSchema === "object" ? savedSchema : {}
+    const schema = {
         ...DEFAULT_CRM_SCHEMA,
-        ...(savedSchema && typeof savedSchema === "object" ? savedSchema : {}),
+        ...savedSchemaObject,
+    }
+
+    if (!savedSchemaObject.tagAttribute || savedSchemaObject.tagAttribute === "tag") {
+        schema.tagAttribute = DEFAULT_CRM_SCHEMA.tagAttribute
+    }
+
+    return normalizeCRMSchema({
+        ...schema,
     })
 }
 

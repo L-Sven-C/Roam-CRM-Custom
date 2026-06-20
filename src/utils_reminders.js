@@ -13,6 +13,7 @@ import {
     createAgendaRegex,
     createAttributeText,
     createHashTagRegex,
+    createPageRef,
     getCRMSchema,
 } from "./schema"
 import { differenceInYears, parse, isValid, setYear, addYears, startOfDay, differenceInDays } from 'date-fns';
@@ -22,7 +23,6 @@ const PERSON_ATTRIBUTE_DEFINITIONS = [
     { schemaKey: "contactFrequencyAttribute", personKey: "Contact Frequency" },
     { schemaKey: "lastContactedAttribute", personKey: "Last Contacted" },
     { schemaKey: "emailAttribute", personKey: "Email" },
-    { schemaKey: "relationshipMetadataAttribute", personKey: "Relationship Metadata" },
 ]
 
 function checkBatchContactSetting(extensionAPI) {
@@ -131,11 +131,15 @@ export async function getAllPeople(extensionAPI) {
                                   :block/uid
                                   :node/title
                                   {:attrs/lookup [:block/string :block/uid]} ])
-                :in $ ?tagAttribute ?personTagPage
+                :in $ ?tagAttribute ?personTagPage ?metadataPage
                 :where 
-                  [?Tags-Ref :node/title ?tagAttribute]
+                  [?category-Ref :node/title ?tagAttribute]
                   [?person-Ref :node/title ?personTagPage]
-                  [?PEOPLEdec :block/refs ?Tags-Ref]
+                  [?metadata-Ref :node/title ?metadataPage]
+                  [?metadataBlock :block/refs ?metadata-Ref]
+                  [?metadataBlock :block/page ?PAGE]
+                  [?metadataBlock :block/children ?PEOPLEdec]
+                  [?PEOPLEdec :block/refs ?category-Ref]
                   [?PEOPLEdec :block/refs ?person-Ref]
                   [?PEOPLEdec :block/page ?PAGE]
                   (not
@@ -150,6 +154,7 @@ export async function getAllPeople(extensionAPI) {
         query,
         schema.tagAttribute,
         schema.personTagPage,
+        schema.metadataAttribute,
     ).flat()
 
     function extractElementsWithKeywords(data, keywords) {
@@ -310,29 +315,41 @@ function getAttributeValue(attributeBlock) {
     return match ? match[2].replace(/\[|\]/g, "") : ""
 }
 
-async function ensureRelationshipMetadataBlock(person, schema) {
-    if (!person["Relationship Metadata"]) {
-        person["Relationship Metadata"] = []
+function getBlockUidByExactTextOnPage(text, page) {
+    const query = `[:find
+    (pull ?node [:block/uid])
+    :in $ ?pageTitle ?string
+    :where
+    [?sourcePage :node/title ?pageTitle]
+    [?node :block/page ?sourcePage]
+    [?node :block/string ?string]
+  ]`
+
+    const result = window.roamAlphaAPI.q(query, page, text).flat()
+    return result[0]?.uid || null
+}
+
+async function ensureContactBlock(person, schema) {
+    const contactBlockText = createPageRef(schema.contactPage)
+    const existingContactBlockUid = getBlockUidByExactTextOnPage(contactBlockText, person.title)
+
+    if (existingContactBlockUid) {
+        return existingContactBlockUid
     }
 
-    if (person["Relationship Metadata"][0]) {
-        return person["Relationship Metadata"][0].uid
-    }
-
-    const relationshipMetadataUID = window.roamAlphaAPI.util.generateUID()
+    const metadataBlockUid =
+        getBlockUidByExactTextOnPage(createPageRef(schema.metadataAttribute), person.title) ||
+        person.uid
+    const contactBlockUid = window.roamAlphaAPI.util.generateUID()
     await createBlock({
         node: {
-            text: createAttributeText(schema, "relationshipMetadataAttribute"),
-            uid: relationshipMetadataUID,
+            text: contactBlockText,
+            uid: contactBlockUid,
         },
-        parentUid: person.uid,
-    })
-    person["Relationship Metadata"].push({
-        string: createAttributeText(schema, "relationshipMetadataAttribute"),
-        uid: relationshipMetadataUID,
+        parentUid: metadataBlockUid,
     })
 
-    return relationshipMetadataUID
+    return contactBlockUid
 }
 
 async function fixPersonJSON(person, schema) {
@@ -365,13 +382,13 @@ async function fixPersonJSON(person, schema) {
         contactDateString = roamAlphaAPI.util.dateToPageTitle(new Date())
         last_contact = parseStringToDate(contactDateString.trim()) || new Date()
 
-        const relationshipMetadataUID = await ensureRelationshipMetadataBlock(person, schema)
+        const contactBlockUid = await ensureContactBlock(person, schema)
         await createBlock({
             node: {
                 text: createAttributeText(schema, "lastContactedAttribute", `[[${contactDateString}]]`),
                 uid: contactUIDString,
             },
-            parentUid: relationshipMetadataUID,
+            parentUid: contactBlockUid,
         })
         person["Last Contacted"].push({
             string: createAttributeText(schema, "lastContactedAttribute"),
@@ -385,23 +402,23 @@ async function fixPersonJSON(person, schema) {
     if (person["Contact Frequency"].length === 0) {
         // there is no contact frequency node so add one
         const contactFrequenceUID = window.roamAlphaAPI.util.generateUID()
-        const relationshipMetadataUID = await ensureRelationshipMetadataBlock(person, schema)
+        const contactBlockUid = await ensureContactBlock(person, schema)
         await createBlock({
             node: {
                 text: createAttributeText(
                     schema,
                     "contactFrequencyAttribute",
-                    "#[[C List]]: Contact every six months",
+                    "#[[C List]]",
                 ),
                 uid: contactFrequenceUID,
             },
-            parentUid: relationshipMetadataUID,
+            parentUid: contactBlockUid,
         })
         person["Contact Frequency"].push({
             string: createAttributeText(
                 schema,
                 "contactFrequencyAttribute",
-                "#[[C List]]: Contact every six months",
+                "#[[C List]]",
             ),
             uid: contactFrequenceUID,
         })

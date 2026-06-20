@@ -59,9 +59,11 @@ function SchemaSettings({ extensionAPI }) {
             <div style={{ marginBottom: "12px", color: "#bfccd6" }}>
                 {t(extensionAPI, "schema.preview", {
                     metadata: previewSchema.metadataAttribute,
-                    tag: previewSchema.tagAttribute,
+                    category: previewSchema.tagAttribute,
                     personTag: previewSchema.personTagPage,
+                    contact: previewSchema.contactPage,
                     agenda: previewSchema.agendaPage,
+                    agendaAttribute: previewSchema.agendaAttribute,
                     call: previewSchema.callPage,
                 })}
             </div>

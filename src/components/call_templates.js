@@ -588,49 +588,59 @@ function createPersonTemplates(parentUid, schema = DEFAULT_CRM_SCHEMA) {
             text: `person metadata #SmartBlock`,
             children: [
                 {
-                    text: createAttributeText(schema, "metadataAttribute"),
+                    text: createPageRef(schema.metadataAttribute),
                     children: [
-                        { text: `phone number::` },
-                        { text: createAttributeText(schema, "emailAttribute") },
-                        { text: `location::` },
-                        { text: `company::` },
-                        { text: `role::` },
-                        { text: `how we met::` },
-                        { text: `social media::` },
                         { text: createAttributeText(schema, "tagAttribute", createHashTag(schema.personTagPage)) },
-                    ],
-                },
-                {
-                    text: createAttributeText(schema, "relationshipMetadataAttribute"),
-                    children: [
+                        { text: `tag::` },
+                        { text: createAttributeText(schema, "birthdayAttribute") },
+                        { text: `location::` },
                         {
-                            text: createAttributeText(
-                                schema,
-                                "contactFrequencyAttribute",
-                                "#[[C List]]: Contact every six months",
-                            ),
-                        },
-                        {
-                            text: createAttributeText(schema, "lastContactedAttribute"),
-                        },
-                        {
-                            text: `friends & family::`,
+                            text: createPageRef(schema.contactPage),
                             children: [
-                                { text: `partner::` },
-                                { text: `kid::` },
-                                { text: `pets::` },
+                                { text: `phone number::` },
+                                { text: createAttributeText(schema, "emailAttribute") },
+                                { text: `social media::` },
+                                {
+                                    text: createAttributeText(
+                                        schema,
+                                        "contactFrequencyAttribute",
+                                        "#[[C List]]",
+                                    ),
+                                },
+                                { text: createAttributeText(schema, "lastContactedAttribute") },
                             ],
                         },
-                        { text: createAttributeText(schema, "birthdayAttribute") },
-
-                        { text: `fun now for me::` },
-                        { text: `growing up::` },
-                        { text: `growing up fun::` },
-                        { text: `favorite food::` },
-                        { text: `favorite place to visit::` },
+                        {
+                            text: createPageRef("work"),
+                            children: [
+                                { text: `company::` },
+                                { text: `role::` },
+                                { text: `history::` },
+                            ],
+                        },
+                        {
+                            text: createPageRef("relationship"),
+                            children: [
+                                { text: `love::` },
+                                { text: `family::` },
+                                { text: `pet::` },
+                                { text: `others::` },
+                            ],
+                        },
+                        {
+                            text: createPageRef("background"),
+                            children: [
+                                { text: `how we met::` },
+                                { text: `growth::` },
+                                { text: `preference::` },
+                            ],
+                        },
+                        { text: `current interest::` },
                         { text: `ask me about::` },
+                        { text: `last reviewed::` },
                     ],
                 },
+                { text: createAttributeText(schema, "agendaAttribute") },
                 { text: `---` },
             ],
         },
