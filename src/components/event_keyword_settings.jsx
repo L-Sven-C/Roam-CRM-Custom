@@ -17,6 +17,7 @@ import {
 import { showToast } from "./toast"
 import { getSmartblockWorkflows } from "../utils"
 import { getDefaultEventKeywords } from "../schema"
+import { t } from "../i18n"
 
 /**
  * Component for managing event keywords in Roam CRM extension settings
@@ -129,24 +130,24 @@ function EventKeywordSettings({ extensionAPI }) {
     }
 
     saveKeywords(newKeywords)
-    showToast("Keyword deleted", "SUCCESS")
+    showToast(t(extensionAPI, "keywords.deleted"), "SUCCESS")
   }
 
   // Handle form submission
   const handleSubmit = () => {
     // Validate form
     if (!formTemplate) {
-      showToast("Parent Block Template is required", "WARNING")
+      showToast(t(extensionAPI, "keywords.templateRequired"), "WARNING")
       return
     }
 
     if (formUseSmartblock && !formSmartblock) {
-      showToast("Please select a SmartBlock workflow", "WARNING")
+      showToast(t(extensionAPI, "keywords.selectSmartblock"), "WARNING")
       return
     }
 
     if (formRequiresMultipleAttendees && !formTemplate.includes("{attendees}")) {
-      showToast("Template must include {attendees} placeholder when multiple attendees are required", "WARNING")
+      showToast(t(extensionAPI, "keywords.attendeesRequired"), "WARNING")
       return
     }
 
@@ -204,16 +205,16 @@ function EventKeywordSettings({ extensionAPI }) {
     resetForm()
 
     showToast(
-      editingIndex !== null ? "Keyword updated" : "Keyword added",
+      editingIndex !== null ? t(extensionAPI, "keywords.updated") : t(extensionAPI, "keywords.added"),
       "SUCCESS"
     )
   }
 
   // Reset to default keywords
   const handleResetToDefaults = () => {
-    if (window.confirm("Are you sure you want to reset to default keywords? This will delete all custom keywords.")) {
+    if (window.confirm(t(extensionAPI, "keywords.confirmReset"))) {
       saveKeywords(getDefaultEventKeywords(extensionAPI))
-      showToast("Reset to default keywords", "SUCCESS")
+      showToast(t(extensionAPI, "keywords.reset"), "SUCCESS")
     }
   }
 
@@ -225,7 +226,7 @@ function EventKeywordSettings({ extensionAPI }) {
       <Menu>
         <div style={{ padding: "5px", borderBottom: "1px solid #394b59" }}>
           <InputGroup
-            placeholder="Filter workflows..."
+            placeholder={t(extensionAPI, "keywords.filterWorkflows")}
             value={workflowFilter}
             onChange={e => setWorkflowFilter(e.target.value)}
             autoFocus
@@ -234,7 +235,7 @@ function EventKeywordSettings({ extensionAPI }) {
         </div>
         <div style={{ maxHeight: "300px", overflow: "auto" }}>
           {filteredWorkflows.length === 0 ? (
-            <Menu.Item disabled text="No matching workflows found" />
+            <Menu.Item disabled text={t(extensionAPI, "keywords.noWorkflows")} />
           ) : (
             filteredWorkflows.map(workflow => (
               <Menu.Item
@@ -253,9 +254,9 @@ function EventKeywordSettings({ extensionAPI }) {
     
     return (
       <FormGroup
-        label="SmartBlock Workflow"
-        labelInfo="(required)"
-        helperText="Select a SmartBlock workflow to use for this keyword"
+        label={t(extensionAPI, "keywords.smartblockWorkflow")}
+        labelInfo={`(${t(extensionAPI, "keywords.required")})`}
+        helperText={t(extensionAPI, "keywords.selectSmartblock")}
       >
         <Popover
           content={workflowMenu}
@@ -264,7 +265,7 @@ function EventKeywordSettings({ extensionAPI }) {
         >
           <Button
             rightIcon="caret-down"
-            text={formSmartblock ? formSmartblock.name : "Select a workflow..."}
+            text={formSmartblock ? formSmartblock.name : t(extensionAPI, "keywords.selectWorkflow")}
             style={{ width: "100%" }}
           />
         </Popover>
@@ -283,23 +284,23 @@ function EventKeywordSettings({ extensionAPI }) {
           padding: "15px"
         }}
       >
-        <h4>{editingIndex !== null ? "Edit Keyword" : "Add New Keyword"}</h4>
+        <h4>{editingIndex !== null ? t(extensionAPI, "keywords.editTitle") : t(extensionAPI, "keywords.addTitle")}</h4>
         
         <FormGroup
-          label="Keyword Term"
-          labelInfo="(leave empty for default/fallback)"
-          helperText="The text to match in event titles. Case-insensitive."
+          label={t(extensionAPI, "keywords.term")}
+          labelInfo={`(${t(extensionAPI, "keywords.termInfo")})`}
+          helperText={t(extensionAPI, "keywords.termHelp")}
         >
           <InputGroup
-            placeholder="e.g., 1:1, lunch, dinner, interview"
+            placeholder={t(extensionAPI, "keywords.termPlaceholder")}
             value={formTerm}
             onChange={e => setFormTerm(e.target.value)}
           />
         </FormGroup>
 
         <FormGroup
-          label="Priority"
-          helperText="Lower numbers have higher priority. Default should be high (e.g., 999)."
+          label={t(extensionAPI, "keywords.priority")}
+          helperText={t(extensionAPI, "keywords.priorityHelp")}
         >
           <NumericInput
             min={1}
@@ -309,14 +310,14 @@ function EventKeywordSettings({ extensionAPI }) {
         </FormGroup>
 
         <FormGroup
-          label="Parent Block Template"
-          labelInfo="(required)"
+          label={t(extensionAPI, "keywords.parentTemplate")}
+          labelInfo={`(${t(extensionAPI, "keywords.required")})`}
           helperText={formRequiresMultipleAttendees 
-            ? "Use {attendees} as a placeholder for the attendee names (required)." 
-            : "Use {attendees} as an optional placeholder for attendee names."}
+            ? t(extensionAPI, "keywords.templateHelpRequired")
+            : t(extensionAPI, "keywords.templateHelpOptional")}
         >
           <InputGroup
-            placeholder="e.g., [[1:1]] with {attendees}"
+            placeholder={t(extensionAPI, "keywords.templatePlaceholder")}
             value={formTemplate}
             onChange={e => setFormTemplate(e.target.value)}
           />
@@ -324,12 +325,12 @@ function EventKeywordSettings({ extensionAPI }) {
 
         <div style={{ marginBottom: "15px" }}>
           <Switch
-            label="Use SmartBlock workflow for content"
+            label={t(extensionAPI, "keywords.useSmartblock")}
             checked={formUseSmartblock}
             onChange={e => setFormUseSmartblock(e.target.checked)}
           />
           <div style={{ fontSize: "12px", color: "#bfccd6", marginLeft: "35px" }}>
-            When enabled, the selected SmartBlock will be triggered to create content under the parent block
+            {t(extensionAPI, "keywords.useSmartblockHelp")}
           </div>
         </div>
 
@@ -337,7 +338,7 @@ function EventKeywordSettings({ extensionAPI }) {
 
         <div style={{ marginBottom: "10px" }}>
           <Switch
-            label="Requires multiple attendees"
+            label={t(extensionAPI, "keywords.requiresMultiple")}
             checked={formRequiresMultipleAttendees}
             onChange={e => setFormRequiresMultipleAttendees(e.target.checked)}
           />
@@ -345,7 +346,7 @@ function EventKeywordSettings({ extensionAPI }) {
 
         <div style={{ marginBottom: "15px" }}>
           <Switch
-            label="Use as default template (when no keywords match)"
+            label={t(extensionAPI, "keywords.defaultTemplate")}
             checked={formIsDefault}
             onChange={e => setFormIsDefault(e.target.checked)}
           />
@@ -353,10 +354,10 @@ function EventKeywordSettings({ extensionAPI }) {
         
         <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
           <Button onClick={resetForm}>
-            Cancel
+            {t(extensionAPI, "keywords.cancel")}
           </Button>
           <Button intent={Intent.PRIMARY} onClick={handleSubmit}>
-            {editingIndex !== null ? "Update" : "Add"}
+            {editingIndex !== null ? t(extensionAPI, "keywords.update") : t(extensionAPI, "keywords.addButton")}
           </Button>
         </div>
       </Card>
@@ -367,13 +368,17 @@ function EventKeywordSettings({ extensionAPI }) {
   const renderTemplateInfo = (keyword) => {
     return (
       <div>
-        <div>Parent Block Template: <code style={{ backgroundColor: "#394b59", color: "#f5f8fa", padding: "2px 5px", borderRadius: "3px" }}>
+        <div>{t(extensionAPI, "keywords.templateLabel")} <code style={{ backgroundColor: "#394b59", color: "#f5f8fa", padding: "2px 5px", borderRadius: "3px" }}>
           {keyword.template}
         </code></div>
         {keyword.useSmartblock && (
           <div style={{ marginTop: "5px" }}>
-            Content: <code style={{ backgroundColor: "#394b59", color: "#f5f8fa", padding: "2px 5px", borderRadius: "3px" }}>
-              SmartBlock - {smartblockWorkflows.find(w => w.uid === keyword.smartblockUid)?.name || 'Unknown workflow'}
+            {t(extensionAPI, "keywords.contentLabel")} <code style={{ backgroundColor: "#394b59", color: "#f5f8fa", padding: "2px 5px", borderRadius: "3px" }}>
+              {t(extensionAPI, "keywords.smartblockLabel", {
+                name:
+                  smartblockWorkflows.find(w => w.uid === keyword.smartblockUid)?.name ||
+                  t(extensionAPI, "keywords.unknownWorkflow"),
+              })}
             </code>
           </div>
         )}
@@ -390,7 +395,7 @@ function EventKeywordSettings({ extensionAPI }) {
           intent={Intent.PRIMARY}
           disabled={isAddingNew || editingIndex !== null}
         >
-          Add Keyword
+            {t(extensionAPI, "keywords.add")}
         </Button>
         <span className="bp3-dark">
           <Button
@@ -398,15 +403,15 @@ function EventKeywordSettings({ extensionAPI }) {
             onClick={handleResetToDefaults}
             minimal={true}
           >
-            Reset to Defaults
+            {t(extensionAPI, "keywords.resetDefaults")}
           </Button>
         </span>
       </div>
 
       <div style={{ marginBottom: "10px" }}>
-        <Tooltip content="Keywords define how calendar events are formatted based on text in the event title. Lower priority numbers take precedence.">
+        <Tooltip content={t(extensionAPI, "settings.eventKeywords.description")}>
           <Icon icon="info-sign" style={{ marginRight: "5px" }} />
-          <span>Keywords are matched in priority order</span>
+          <span>{t(extensionAPI, "keywords.info")}</span>
         </Tooltip>
       </div>
 
@@ -415,7 +420,7 @@ function EventKeywordSettings({ extensionAPI }) {
 
       {keywords.length === 0 && !isAddingNew ? (
         <div>
-          <p>No keywords defined. Click "Add Keyword" to create your first custom event keyword, or "Reset to Defaults" to use the standard templates.</p>
+          <p>{t(extensionAPI, "keywords.none")}</p>
         </div>
       ) : (
         <div className="keyword-list">
@@ -435,14 +440,14 @@ function EventKeywordSettings({ extensionAPI }) {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
                     <h4 style={{ margin: "0 0 5px 0" }}>
-                      {keyword.term ? keyword.term : <em>Default Template</em>}
+                      {keyword.term ? keyword.term : <em>{t(extensionAPI, "keywords.defaultCard")}</em>}
                       {keyword.isDefault && (
-                        <Tooltip content="This is the default template used when no keywords match">
+                        <Tooltip content={t(extensionAPI, "keywords.defaultTooltip")}>
                           <Icon icon="star" style={{ marginLeft: "5px", color: "#137CBD" }} />
                         </Tooltip>
                       )}
                       {keyword.useSmartblock && (
-                        <Tooltip content="Uses a SmartBlock workflow for content">
+                        <Tooltip content={t(extensionAPI, "keywords.smartblockTooltip")}>
                           <Icon icon="code-block" style={{ marginLeft: "5px", color: "#A854A8" }} />
                         </Tooltip>
                       )}
@@ -450,8 +455,10 @@ function EventKeywordSettings({ extensionAPI }) {
                     {renderTemplateInfo(keyword)}
                     <div>
                       <small>
-                        Priority: {keyword.priority} •
-                        {keyword.requiresMultipleAttendees ? " Requires multiple attendees" : " Works with any attendees"}
+                        {t(extensionAPI, "keywords.priorityLabel", { priority: keyword.priority })} •{" "}
+                        {keyword.requiresMultipleAttendees
+                          ? t(extensionAPI, "keywords.multipleRequired")
+                          : t(extensionAPI, "keywords.anyAttendees")}
                       </small>
                     </div>
                   </div>

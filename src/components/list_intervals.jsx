@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+import { t } from "../i18n"
 // custom component to let a user change the reminder intervales for
 // aList, bList, cList, dList, and fList contacts
 function IntervalSettings({ extensionAPI }) {
@@ -39,7 +40,7 @@ function IntervalSettings({ extensionAPI }) {
                     value={aList}
                     onChange={handleChange(setAList, "aList")}
                 />
-                Days
+                {t(extensionAPI, "interval.days")}
             </div>
             <div>
                 <label>B List: </label>
@@ -57,7 +58,7 @@ function IntervalSettings({ extensionAPI }) {
                     value={bList}
                     onChange={handleChange(setBList, "bList")}
                 />
-                Days
+                {t(extensionAPI, "interval.days")}
             </div>
             <div>
                 <label>C List: </label>
@@ -75,7 +76,7 @@ function IntervalSettings({ extensionAPI }) {
                     value={cList}
                     onChange={handleChange(setCList, "cList")}
                 />
-                Days
+                {t(extensionAPI, "interval.days")}
             </div>
             <div>
                 <label>D List: </label>
@@ -93,7 +94,7 @@ function IntervalSettings({ extensionAPI }) {
                     value={dList}
                     onChange={handleChange(setDList, "dList")}
                 />
-                Days
+                {t(extensionAPI, "interval.days")}
             </div>
             <div>
                 <label>F List: </label>
@@ -111,7 +112,7 @@ function IntervalSettings({ extensionAPI }) {
                     value={fList}
                     onChange={handleChange(setFList, "fList")}
                 />
-                Days
+                {t(extensionAPI, "interval.days")}
             </div>
         </div>
     )

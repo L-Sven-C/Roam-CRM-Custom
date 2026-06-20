@@ -19,6 +19,7 @@ import createBlock from "roamjs-components/writes/createBlock"
 import displayCRMDialog from "./clay"
 import { getExtensionAPISetting } from "../utils"
 import { createAttributeText, getCRMSchema } from "../schema"
+import { t } from "../i18n"
 
 const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionAPI }) => {
     // State to store the reminders data
@@ -120,19 +121,19 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                         justifyContent: "space-between",
                     }}
                 >
-                    <span>Roam CRM</span>
+                    <span>{t(extensionAPI, "drawer.title")}</span>
                     <div style={{ justifyContent: "flex-end" }}>
-                        <Tooltip content="WIP: CRM Workspace UI" position="top">
+                        <Tooltip content={t(extensionAPI, "drawer.workspaceTooltip")} position="top">
                             <AnchorButton
                                 icon="fullscreen"
                                 minimal={true}
                                 onClick={() => {
                                     onClose() // Close the Drawer
-                                    displayCRMDialog(people) // Display the CRM dialog
+                                    displayCRMDialog(people, extensionAPI) // Display the CRM dialog
                                 }}
                             />
                         </Tooltip>
-                        <Tooltip content="Sync Calendar" position="top">
+                        <Tooltip content={t(extensionAPI, "drawer.syncCalendarTooltip")} position="top">
                             <AnchorButton
                                 icon="cloud-download"
                                 minimal={true}
@@ -141,15 +142,15 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                                 }
                                 onClick={() => {
                                     console.log('Sync Calendar button clicked - starting manual sync');
-                                    showToast("Beginning calendar sync...", "INFO");
+                                    showToast(t(extensionAPI, "drawer.syncStarting"), "INFO");
                                     getEventInfo(people, extensionAPI, false, true, 'Modal Button')
                                       .then(() => {
                                           console.log('Calendar sync completed');
-                                          showToast("Calendar sync complete", "SUCCESS");
+                                          showToast(t(extensionAPI, "drawer.syncComplete"), "SUCCESS");
                                       })
                                       .catch(err => {
                                           console.error('Calendar sync error:', err);
-                                          showToast("Calendar sync error: " + err.message, "DANGER");
+                                          showToast(t(extensionAPI, "drawer.syncError", { message: err.message }), "DANGER");
                                       });
                                 }}
                             />
@@ -172,7 +173,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                 {reminders.aAndBBirthdaysToday.length > 0 && (
                     <>
                         <div className="reminder-section">
-                            <h5>Birthdays Today</h5>
+                            <h5>{t(extensionAPI, "drawer.birthdaysToday")}</h5>
                             <ul>
                                 {reminders.aAndBBirthdaysToday.map((person, index) => (
                                     <li key={index}>
@@ -183,8 +184,8 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                                                 })
                                             }
                                         >
-                                            {person.name} is {calculateAge(person.birthday)} years
-                                            old
+                                            {person.name} {calculateAge(person.birthday)}{" "}
+                                            {t(extensionAPI, "drawer.yearsOld")}
                                         </a>
                                     </li>
                                 ))}
@@ -196,7 +197,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                 {reminders.filteredUpcomingBirthdays.length > 0 && (
                     <>
                         <div className="reminder-section">
-                            <h5>Upcoming Birthdays </h5>
+                            <h5>{t(extensionAPI, "drawer.upcomingBirthdays")}</h5>
                             <ul>
                                 {reminders.filteredUpcomingBirthdays.map((person, index) => (
                                     <li key={index}>
@@ -209,9 +210,13 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                                         >
                                             {person.name}{" "}
                                         </a>
-                                        {new Date(person.birthday).toLocaleDateString()} (in{" "}
-                                        {person.daysUntilBirthday}{" "}
-                                        {person.daysUntilBirthday === 1 ? "day" : "days"})
+                                        {new Date(person.birthday).toLocaleDateString()} (
+                                        {person.daysUntilBirthday === 1
+                                            ? t(extensionAPI, "drawer.inOneDay")
+                                            : t(extensionAPI, "drawer.inDays", {
+                                                  days: person.daysUntilBirthday,
+                                              })}
+                                        )
                                     </li>
                                 ))}
                             </ul>
@@ -222,7 +227,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                 {reminders.toBeContacted.length > 0 && (
                     <>
                         <div className="reminder-section">
-                            <h5>Time to reach out to</h5>
+                            <h5>{t(extensionAPI, "drawer.reachOut")}</h5>
                             <ul className="multi-column-list">
                                 {reminders.toBeContacted.map(
                                     (person, index) =>
@@ -264,7 +269,11 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                                                 <li style={{ gridColumn: "span 2" }}>
                                                     <Collapse isOpen={openIndexes.includes(index)}>
                                                         <TextArea
-                                                            placeholder={`Type a message to ${person.name}`}
+                                                            placeholder={t(
+                                                                extensionAPI,
+                                                                "drawer.messagePlaceholder",
+                                                                { name: person.name },
+                                                            )}
                                                             growVertically={true}
                                                             fill={true}
                                                             value={messages[index] || ""}
@@ -278,7 +287,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                                                         <Button
                                                             intent="primary"
                                                             // icon="send-message"
-                                                            text="Send to Person's Page"
+                                                            text={t(extensionAPI, "drawer.sendToPerson")}
                                                             onClick={() =>
                                                                 handleSendMessage(index, person)
                                                             }
@@ -298,7 +307,7 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
                     reminders.filteredUpcomingBirthdays.length == 0 && (
                         <>
                             <div className="empty-section">
-                                <ul>"Nothing to see today 👀. Come Back Later"</ul>
+                                <ul>{t(extensionAPI, "drawer.empty")}</ul>
                             </div>
                         </>
                     )}

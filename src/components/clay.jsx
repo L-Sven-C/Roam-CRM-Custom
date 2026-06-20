@@ -15,8 +15,9 @@ import {
     Tooltip,
 } from "@blueprintjs/core"
 import { getAllPageRefEvents, calculateAge, getOrdinalSuffix } from "../utils_reminders"
+import { t } from "../i18n"
 
-const CRMDialog = ({ onClose, isOpen, people }) => {
+const CRMDialog = ({ onClose, isOpen, people, extensionAPI }) => {
     const [selectedPersonUID, setSelectedPersonUID] = useState(null)
     const [searchQuery, setSearchQuery] = useState("")
     const [sortOption, setSortOption] = useState("firstName")
@@ -112,7 +113,9 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
     }, [people])
 
     const getPersonTitle = (person) => {
-        return person && person.title ? person.title.replace("PERSON: ", "") : "Unknown"
+        return person && person.title
+            ? person.title.replace("PERSON: ", "")
+            : t(extensionAPI, "workspace.unknownPerson")
     }
 
     const getPersonFirstName = (person) => {
@@ -219,7 +222,9 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
 
                 const eventText =
                     event.type === "birthday"
-                        ? `${event.title || event.string}'s Birthday`
+                        ? t(extensionAPI, "workspace.birthdayTitle", {
+                              name: event.title || event.string,
+                          })
                         : event.title || event.string
 
                 return (
@@ -276,7 +281,10 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
 
                     const ageWithSuffix = getOrdinalSuffix(event.age)
 
-                    const eventText = `${event.title || event.string}'s ${ageWithSuffix} Birthday`
+                    const eventText = t(extensionAPI, "workspace.birthdayAgeTitle", {
+                        name: event.title || event.string,
+                        age: ageWithSuffix,
+                    })
 
                     const daysDiff = Math.ceil(
                         (event.birthdayThisYear - today) / (1000 * 60 * 60 * 24),
@@ -309,12 +317,12 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
 
     const SortMenu = () => (
         <Menu>
-            <MenuItem text="First Name" onClick={() => handleSortChange("firstName")} />
-            <MenuItem text="Last Name" onClick={() => handleSortChange("lastName")} />
-            <MenuItem text="Last Contacted" onClick={() => handleSortChange("lastContacted")} />
+            <MenuItem text={t(extensionAPI, "workspace.firstName")} onClick={() => handleSortChange("firstName")} />
+            <MenuItem text={t(extensionAPI, "workspace.lastName")} onClick={() => handleSortChange("lastName")} />
+            <MenuItem text={t(extensionAPI, "workspace.lastContacted")} onClick={() => handleSortChange("lastContacted")} />
             <Menu.Divider />
-            <MenuItem text="Ascending" onClick={() => handleSortOrderChange("asc")} />
-            <MenuItem text="Descending" onClick={() => handleSortOrderChange("desc")} />
+            <MenuItem text={t(extensionAPI, "workspace.ascending")} onClick={() => handleSortOrderChange("asc")} />
+            <MenuItem text={t(extensionAPI, "workspace.descending")} onClick={() => handleSortOrderChange("desc")} />
         </Menu>
     )
 
@@ -350,7 +358,7 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                         padding: "20px",
                     }}
                 >
-                    <h4>CRM Workspace</h4>
+                    <h4>{t(extensionAPI, "workspace.title")}</h4>
                     <Tabs
                         id="tabs"
                         vertical
@@ -358,10 +366,10 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                         selectedTabId={selectedTabId}
                         onChange={(newTabId) => setSelectedTabId(newTabId)}
                     >
-                        <Tab id="home" title="Home" disabled />
-                        <Tab id="people" title="People" />
-                        <Tab id="events" title="Events" />
-                        <Tab id="birthdays" title="Birthdays" />
+                        <Tab id="home" title={t(extensionAPI, "workspace.home")} disabled />
+                        <Tab id="people" title={t(extensionAPI, "workspace.people")} />
+                        <Tab id="events" title={t(extensionAPI, "workspace.events")} />
+                        <Tab id="birthdays" title={t(extensionAPI, "workspace.birthdays")} />
                     </Tabs>
                 </div>
 
@@ -392,15 +400,15 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                             {(() => {
                                 switch (selectedTabId) {
                                     case "home":
-                                        return "Home"
+                                        return t(extensionAPI, "workspace.home")
                                     case "people":
-                                        return "People"
+                                        return t(extensionAPI, "workspace.people")
                                     case "events":
-                                        return "Events"
+                                        return t(extensionAPI, "workspace.events")
                                     case "birthdays":
-                                        return "Upcoming Birthdays"
+                                        return t(extensionAPI, "workspace.upcomingBirthdays")
                                     default:
-                                        return "Unknown Tab"
+                                        return t(extensionAPI, "workspace.unknownTab")
                                 }
                             })()}
                         </h4>
@@ -419,13 +427,17 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                                 placeholder={(() => {
                                     switch (selectedTabId) {
                                         case "home":
-                                            return "Search..."
+                                            return t(extensionAPI, "workspace.search")
                                         case "people":
-                                            return `Search ${filteredPeople.length} people...`
+                                            return t(extensionAPI, "workspace.searchPeople", {
+                                                count: filteredPeople.length,
+                                            })
                                         case "events":
-                                            return `Search ${filteredEvents.length} events...`
+                                            return t(extensionAPI, "workspace.searchEvents", {
+                                                count: filteredEvents.length,
+                                            })
                                         default:
-                                            return "Search..."
+                                            return t(extensionAPI, "workspace.search")
                                     }
                                 })()}
                                 style={{ width: "1000 px" }}
@@ -448,7 +460,7 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                             case "birthdays":
                                 return <BirthdayList />
                             default:
-                                return <div>Unknown tab content</div>
+                                return <div>{t(extensionAPI, "workspace.unknownContent")}</div>
                         }
                     })()}
                 </div>
@@ -482,13 +494,15 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
                                 {selectedPerson
                                     ? getPersonTitle(selectedPerson)
                                     : selectedEvent.type === "birthday"
-                                      ? `${selectedEvent.title || selectedEvent.string}'s Birthday`
+                                      ? t(extensionAPI, "workspace.birthdayTitle", {
+                                            name: selectedEvent.title || selectedEvent.string,
+                                        })
                                       : selectedEvent.title || selectedEvent.page.title}
                             </h4>
                             <div id="block-container-1" style={{ marginTop: "10px" }}></div>
                         </>
                     ) : (
-                        <div>Select a person or event to view details</div>
+                        <div>{t(extensionAPI, "workspace.selectDetails")}</div>
                     )}
                 </div>
             </div>
@@ -496,11 +510,11 @@ const CRMDialog = ({ onClose, isOpen, people }) => {
     )
 }
 
-const displayCRMDialog = async (people) => {
+const displayCRMDialog = async (people, extensionAPI) => {
     if (document.getElementsByClassName("crm-dialog").length === 0) {
         renderOverlay({
             Overlay: CRMDialog,
-            props: { isOpen: true, people },
+            props: { isOpen: true, people, extensionAPI },
         })
     }
 }

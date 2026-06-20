@@ -8,6 +8,7 @@ import {
     normalizeCRMSchema,
     setCRMSchema,
 } from "../schema"
+import { t } from "../i18n"
 
 function SchemaSettings({ extensionAPI }) {
     const [schema, setSchema] = useState(DEFAULT_CRM_SCHEMA)
@@ -26,13 +27,13 @@ function SchemaSettings({ extensionAPI }) {
     const handleSave = () => {
         const normalizedSchema = setCRMSchema(extensionAPI, schema)
         setSchema(normalizedSchema)
-        showToast("Schema settings saved. Reload Roam to refresh Agenda watches.", "SUCCESS")
+        showToast(t(extensionAPI, "schema.saved"), "SUCCESS")
     }
 
     const handleReset = () => {
         const normalizedSchema = setCRMSchema(extensionAPI, DEFAULT_CRM_SCHEMA)
         setSchema(normalizedSchema)
-        showToast("Schema settings reset to lowercase defaults.", "SUCCESS")
+        showToast(t(extensionAPI, "schema.resetDone"), "SUCCESS")
     }
 
     const previewSchema = normalizeCRMSchema(schema)
@@ -42,8 +43,10 @@ function SchemaSettings({ extensionAPI }) {
             {CRM_SCHEMA_FIELDS.map((field) => (
                 <FormGroup
                     key={field.key}
-                    label={field.label}
-                    helperText={`Default: ${DEFAULT_CRM_SCHEMA[field.key]}`}
+                    label={t(extensionAPI, `schema.${field.key}`)}
+                    helperText={t(extensionAPI, "schema.default", {
+                        value: DEFAULT_CRM_SCHEMA[field.key],
+                    })}
                 >
                     <InputGroup
                         value={schema[field.key] || ""}
@@ -54,19 +57,21 @@ function SchemaSettings({ extensionAPI }) {
             ))}
 
             <div style={{ marginBottom: "12px", color: "#bfccd6" }}>
-                Current defaults create{" "}
-                <code>{previewSchema.metadataAttribute}::</code> with{" "}
-                <code>{previewSchema.tagAttribute}:: #{previewSchema.personTagPage}</code>, Agenda tag{" "}
-                <code>#{previewSchema.agendaPage}</code>, and call blocks under{" "}
-                <code>[[{previewSchema.callPage}]]</code>.
+                {t(extensionAPI, "schema.preview", {
+                    metadata: previewSchema.metadataAttribute,
+                    tag: previewSchema.tagAttribute,
+                    personTag: previewSchema.personTagPage,
+                    agenda: previewSchema.agendaPage,
+                    call: previewSchema.callPage,
+                })}
             </div>
 
             <div style={{ display: "flex", gap: "10px" }}>
                 <Button intent={Intent.PRIMARY} onClick={handleSave}>
-                    Save Schema
+                    {t(extensionAPI, "schema.save")}
                 </Button>
                 <Button icon="reset" onClick={handleReset}>
-                    Reset Defaults
+                    {t(extensionAPI, "schema.reset")}
                 </Button>
             </div>
         </div>

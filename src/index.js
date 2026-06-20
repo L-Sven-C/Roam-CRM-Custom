@@ -15,6 +15,7 @@ import { moveFocus, getLastBlockAndFocus } from './utils';
 import EventKeywordSettings from "./components/event_keyword_settings"
 import SchemaSettings from "./components/schema_settings"
 import { getAgendaPullEntity, getCRMSchema } from "./schema"
+import { UI_LANGUAGE_OPTIONS, t } from "./i18n"
 
 const testing = false
 const version = "v2.9.8"
@@ -51,45 +52,56 @@ function createPanelConfig(extensionAPI, pullFunction) {
         settings: [
             {
                 id: "version-text",
-                name: "Version",
+                name: t(extensionAPI, "settings.version"),
                 action: { type: "reactComponent", component: versionTextComponent },
             },
             {
+                id: "ui-language-header",
+                name: t(extensionAPI, "settings.language.header"),
+                action: { type: "reactComponent", component: headerTextComponent },
+            },
+            {
+                id: "ui-language",
+                name: t(extensionAPI, "settings.language.name"),
+                description: t(extensionAPI, "settings.language.description"),
+                action: {
+                    type: "select",
+                    items: UI_LANGUAGE_OPTIONS,
+                },
+            },
+            {
                 id: "schema-header",
-                name: "Schema Settings",
+                name: t(extensionAPI, "settings.schema.header"),
                 action: { type: "reactComponent", component: headerTextComponent },
             },
             {
                 id: "schema-settings",
-                name: "Core Field Schema",
-                description:
-                    "Customize the lowercase field names Roam CRM uses for people, agenda, and call templates. Reload Roam after changing agenda fields.",
+                name: t(extensionAPI, "settings.schema.name"),
+                description: t(extensionAPI, "settings.schema.description"),
                 className: "crm-schema-setting",
                 action: { type: "reactComponent", component: wrappedSchemaConfig },
             },
             {
                 id: "event-keywords-header",
-                name: "Event Keywords Settings",
+                name: t(extensionAPI, "settings.eventKeywords.header"),
                 action: { type: "reactComponent", component: headerTextComponent },
             },
             {
                 id: "event-keywords-setting",
-                name: "Customizable Event Keywords",
-                description:
-                    "Customize how calendar events are formatted based on keywords in the event title. Define custom templates for different types of events.",
+                name: t(extensionAPI, "settings.eventKeywords.name"),
+                description: t(extensionAPI, "settings.eventKeywords.description"),
                 className: "crm-event-keywords-setting",
                 action: { type: "reactComponent", component: wrappedEventKeywordConfig },
             },
             {
                 id: "modal-header",
-                name: "Modal Settings",
+                name: t(extensionAPI, "settings.modal.header"),
                 action: { type: "reactComponent", component: headerTextComponent },
             },
             {
                 id: "batch-contact-notification",
-                name: "Batch Contact Reminders",
-                description:
-                    "If a day is selected 'Time to reach out to' reminders will be batched and only shown on that day.",
+                name: t(extensionAPI, "settings.batch.name"),
+                description: t(extensionAPI, "settings.batch.description"),
                 action: {
                     type: "select",
                     items: [
@@ -106,16 +118,15 @@ function createPanelConfig(extensionAPI, pullFunction) {
             },
             {
                 id: "interval-settings",
-                name: "Contact Frequency Intervals",
-                description:
-                    "Set custom contact frequency durations. See the README for more info.",
+                name: t(extensionAPI, "settings.intervals.name"),
+                description: t(extensionAPI, "settings.intervals.description"),
                 className: "crm-reminders-interval-setting",
                 action: { type: "reactComponent", component: wrappedIntervalConfig },
             },
             {
                 id: "sidebar-button",
-                name: "Left Sidebar Button",
-                description: "Add a button to the left sidebar to quickly launch the CRM",
+                name: t(extensionAPI, "settings.sidebar.name"),
+                description: t(extensionAPI, "settings.sidebar.description"),
                 action: {
                     type: "switch",
                     onChange: (evt) => {
@@ -130,9 +141,8 @@ function createPanelConfig(extensionAPI, pullFunction) {
             },
             {
                 id: "trigger-modal",
-                name: "Trigger modal at start of day",
-                description:
-                    "In addition to triggering on load this will also trigger the modal at the start of each day. This will be most useful for people who leave Roam open for extended periods.",
+                name: t(extensionAPI, "settings.triggerStart.name"),
+                description: t(extensionAPI, "settings.triggerStart.description"),
                 action: {
                     type: "switch",
                     onChange: async (evt) => {
@@ -142,9 +152,8 @@ function createPanelConfig(extensionAPI, pullFunction) {
             },
             {
                 id: "trigger-modal-on-load",
-                name: "Prevent modal triggering on load",
-                description:
-                    "This prevents the CRM Modal opening when Roam is first opened.",
+                name: t(extensionAPI, "settings.preventLoad.name"),
+                description: t(extensionAPI, "settings.preventLoad.description"),
                 action: {
                     type: "switch",
                     onChange: async (evt) => {
@@ -154,30 +163,29 @@ function createPanelConfig(extensionAPI, pullFunction) {
             },
             {
                 id: "dnp-all-birthdays",
-                name: "Include A/B List birthdays on Daily Notes",
-                description: "When enabled, birthdays for A/B List contacts will appear on Daily Notes pages alongside other birthdays. By default, A/B List birthdays only appear in the CRM drawer. F List birthdays are always excluded.",
+                name: t(extensionAPI, "settings.allBirthdays.name"),
+                description: t(extensionAPI, "settings.allBirthdays.description"),
                 action: {
                     type: "switch",
                 },
             },
             {
                 id: "show-birthday-check-toast",
-                name: "Show notification for background birthday checks",
-                description: "When enabled, a toast notification will appear whenever the automatic birthday check runs (hourly or every 30 minutes based on your settings).",
+                name: t(extensionAPI, "settings.birthdayToast.name"),
+                description: t(extensionAPI, "settings.birthdayToast.description"),
                 action: {
                     type: "switch",
                 },
             },
             {
                 id: "calendar-header",
-                name: "Calendar Settings",
+                name: t(extensionAPI, "settings.calendar.header"),
                 action: { type: "reactComponent", component: headerTextComponent },
             },
             {
                 id: "calendar-setting",
-                name: "Import Today's Calender Events On Load",
-                description:
-                    "Imports today's call events from a linked google calendar. Requires the Google extension from Roam Depot to be installed and a reload of the Roam tab to start. See the README",
+                name: t(extensionAPI, "settings.calendarImport.name"),
+                description: t(extensionAPI, "settings.calendarImport.description"),
                 action: {
                     type: "switch",
                     onChange: async (evt) => { },
@@ -186,9 +194,8 @@ function createPanelConfig(extensionAPI, pullFunction) {
 
             {
                 id: "include-event-title",
-                name: "Include event title ",
-                description:
-                    "When events import, include the events title in the call template header text",
+                name: t(extensionAPI, "settings.includeTitle.name"),
+                description: t(extensionAPI, "settings.includeTitle.description"),
                 action: {
                     type: "switch",
                     onChange: (evt) => { },
@@ -196,9 +203,8 @@ function createPanelConfig(extensionAPI, pullFunction) {
             },
             {
                 id: "detect-deleted-events",
-                name: "Detect deleted calendar events",
-                description:
-                    "Check for events that have been deleted from Google Calendar in the last 7 days and next 7 days. Currently only logs deletions to console.",
+                name: t(extensionAPI, "settings.deletedEvents.name"),
+                description: t(extensionAPI, "settings.deletedEvents.description"),
                 action: {
                     type: "switch",
                     onChange: (evt) => { },
@@ -206,15 +212,14 @@ function createPanelConfig(extensionAPI, pullFunction) {
             },
             {
                 id: "agenda-header",
-                name: "Agenda Addr Settings",
+                name: t(extensionAPI, "settings.agenda.header"),
                 action: { type: "reactComponent", component: headerTextComponent },
             },
 
             {
                 id: "agenda-addr-setting",
-                name: "Run the Agenda Addr",
-                description:
-                    "When you make a block anywhere that has as persons name `[[Bill Gates]]` and add the hashtag `#agenda` Roam CRM will automatically nest a block-ref of that block on Bill's page under an agenda attribute.",
+                name: t(extensionAPI, "settings.agendaRun.name"),
+                description: t(extensionAPI, "settings.agendaRun.description"),
                 action: {
                     type: "switch",
                     onChange: async (evt) => {
@@ -234,39 +239,35 @@ function createPanelConfig(extensionAPI, pullFunction) {
             },
             {
                 id: "agenda-addr-remove-names",
-                name: "Remove #tagged names in Agenda Addr blocks",
-                description:
-                    "In a block tagged [[agenda]] (and when the Agenda Addr is turned on) If a person's name is tagged with a hashtag ( #[[Steve Jobs]] ), then the tagged name will be auto removed after the Agenda Addr is run.",
+                name: t(extensionAPI, "settings.agendaRemoveNames.name"),
+                description: t(extensionAPI, "settings.agendaRemoveNames.description"),
                 action: { type: "switch" },
             },
             
             {
                 id: "templates-header",
-                name: "Setup Templates",
-                description:
-                    "Below are the templates that facilitate Roam CRM. Each button only needs to be hit once the first time you setup the extension in a graph. See the README for more information.",
+                name: t(extensionAPI, "settings.templates.header"),
+                description: t(extensionAPI, "settings.templates.description"),
                 action: { type: "reactComponent", component: headerTextComponent },
             },
             {
                 id: "person-template",
-                name: "Imports Person Metadata Template",
-                description:
-                    "Imports the person metadata template into your roam/templates page. This template structure is important for Roam CRM to work.",
+                name: t(extensionAPI, "settings.personTemplate.name"),
+                description: t(extensionAPI, "settings.personTemplate.description"),
                 action: {
                     type: "button",
                     onClick: async () => {
                         const templatePageUID = await getPageUID("roam/templates")
                         createPersonTemplates(templatePageUID, getCRMSchema(extensionAPI))
-                        showToast(`Template Added.`, "SUCCESS")
+                        showToast(t(extensionAPI, "toast.templateAdded"), "SUCCESS")
                     },
-                    content: "Import",
+                    content: t(extensionAPI, "settings.import"),
                 },
             },
             {
                 id: "call-rollup-query",
-                name: "Import Call Rollup Queries",
-                description:
-                    "Imports the rollup query templates to your configured `[[call]]` page. These can be referenced or added to templates as needed.",
+                name: t(extensionAPI, "settings.callRollup.name"),
+                description: t(extensionAPI, "settings.callRollup.description"),
                 action: {
                     type: "button",
                     onClick: async () => {
@@ -275,24 +276,23 @@ function createPanelConfig(extensionAPI, pullFunction) {
                         createLastMonthCalls(callPageUID, schema)
                         createLastWeekCalls(callPageUID, schema)
 
-                        showToast(`Templates Added.`, "SUCCESS")
+                        showToast(t(extensionAPI, "toast.templatesAdded"), "SUCCESS")
                     },
-                    content: "Import",
+                    content: t(extensionAPI, "settings.import"),
                 },
             },
             {
                 id: "call-template",
-                name: "Import Call Template",
-                description:
-                    "Imports the call template into your roam/templates page. This template structure is important for the rollup queries to work.",
+                name: t(extensionAPI, "settings.callTemplate.name"),
+                description: t(extensionAPI, "settings.callTemplate.description"),
                 action: {
                     type: "button",
                     onClick: async () => {
                         const templatePageUID = await getPageUID("roam/templates")
                         createCallTemplates(templatePageUID, getCRMSchema(extensionAPI))
-                        showToast(`Template Added.`, "SUCCESS")
+                        showToast(t(extensionAPI, "toast.templateAdded"), "SUCCESS")
                     },
-                    content: "Import",
+                    content: t(extensionAPI, "settings.import"),
                 },
             },
         ],
@@ -319,7 +319,7 @@ async function crmbutton(extensionAPI) {
         }
         divCRM.onclick = async () => {
             const allPeople = await getAllPeople(extensionAPI)
-            displayCRMDialog(allPeople)
+            displayCRMDialog(allPeople, extensionAPI)
         }
     }
 }
@@ -437,12 +437,12 @@ async function onload({ extensionAPI }) {
                         
                         // Show toast if setting is enabled
                         if (getExtensionAPISetting(extensionAPI, "show-birthday-check-toast", false)) {
-                            showToast("Birthday check complete - Daily Notes updated", "SUCCESS");
+                            showToast(t(extensionAPI, "toast.birthdayCompleteUpdated"), "SUCCESS");
                         }
                     } else {
                         // Always show the toast for periodic checks if setting is enabled
                         if (getExtensionAPISetting(extensionAPI, "show-birthday-check-toast", false)) {
-                            showToast("Birthday check complete - No updates needed", "INFO");
+                            showToast(t(extensionAPI, "toast.birthdayCompleteNoUpdates"), "INFO");
                         }
                     }
                 } catch (error) {
@@ -492,12 +492,12 @@ async function onload({ extensionAPI }) {
                     
                     // Show toast if setting is enabled
                     if (getExtensionAPISetting(extensionAPI, "show-birthday-check-toast", false)) {
-                        showToast("Birthday check complete - Daily Notes updated", "SUCCESS");
+                        showToast(t(extensionAPI, "toast.birthdayCompleteUpdated"), "SUCCESS");
                     }
                 } else {
                     // Always show the toast for periodic checks if setting is enabled
                     if (getExtensionAPISetting(extensionAPI, "show-birthday-check-toast", false)) {
-                        showToast("Birthday check complete - No updates needed", "INFO");
+                        showToast(t(extensionAPI, "toast.birthdayCompleteNoUpdates"), "INFO");
                     }
                 }
             },
@@ -596,12 +596,12 @@ async function onload({ extensionAPI }) {
                         
                         // Show toast if setting is enabled
                         if (getExtensionAPISetting(extensionAPI, "show-birthday-check-toast", false)) {
-                            showToast("Birthday check complete after tab activation - Daily Notes updated", "SUCCESS");
+                            showToast(t(extensionAPI, "toast.birthdayActivationUpdated"), "SUCCESS");
                         }
                     });
                 } else if (getExtensionAPISetting(extensionAPI, "show-birthday-check-toast", false)) {
                     // Show toast for visibility change check if enabled
-                    showToast("Birthday check verified - already up to date", "INFO");
+                    showToast(t(extensionAPI, "toast.birthdayAlreadyUpdated"), "INFO");
                 }
             }
             
@@ -622,7 +622,7 @@ async function onload({ extensionAPI }) {
     //MARK: command palette
     // Command Palette Sidebar - Close first block
     extensionAPI.ui.commandPalette.addCommand({
-        label: "Sidebar - Close first block",
+        label: t(extensionAPI, "command.sidebarCloseFirst"),
         "disable-hotkey": false,
         callback: async () => {
             async function removeWindow(w) {
@@ -663,7 +663,7 @@ async function onload({ extensionAPI }) {
     })
     // Command Palette Sidebar - Cursor in first block
     extensionAPI.ui.commandPalette.addCommand({
-        label: "Sidebar - Cursor in first block",
+        label: t(extensionAPI, "command.sidebarCursorFirst"),
         "disable-hotkey": false,
         callback: async () => {
             let sidebarWindows = window.roamAlphaAPI.ui.rightSidebar.getWindows()
@@ -698,7 +698,7 @@ async function onload({ extensionAPI }) {
     })
     // Command Palette Sidebar - Toggle first sidebar window open/close
     extensionAPI.ui.commandPalette.addCommand({
-        label: "Sidebar - Toggle first sidebar window open/close",
+        label: t(extensionAPI, "command.sidebarToggleFirst"),
         "disable-hotkey": false,
         callback: async () => {
             async function toggleWindowCollapse(w) {
@@ -729,7 +729,7 @@ async function onload({ extensionAPI }) {
     })
     // Command Palette Sidebar - Pin focused block or page
     extensionAPI.ui.commandPalette.addCommand({
-        label: "Sidebar - Pin focused block or page",
+        label: t(extensionAPI, "command.sidebarPinFocused"),
         "disable-hotkey": false,
         callback: async () => {
             const focusedBlock = roamAlphaAPI.ui.getFocusedBlock()
@@ -808,7 +808,7 @@ async function onload({ extensionAPI }) {
     })
     // Command Palette Sidebar - Super Pin (pin to top) focused block or page
     extensionAPI.ui.commandPalette.addCommand({
-        label: "Sidebar - Pin focused block or page to top",
+        label: t(extensionAPI, "command.sidebarPinTopFocused"),
         "disable-hotkey": false,
         callback: async () => {
             const focusedBlock = roamAlphaAPI.ui.getFocusedBlock()
@@ -889,20 +889,20 @@ async function onload({ extensionAPI }) {
     })
     // Command Palette Sidebar - Nav Up open sidebar windows
     extensionAPI.ui.commandPalette.addCommand({
-        label: 'Sidebar - Navigate Up',
+        label: t(extensionAPI, "command.sidebarNavigateUp"),
         callback: () => moveFocus('up'),
         "disable-hotkey": false,
     });
     // Command Palette Sidebar - Nav Down open sidebar windows
     extensionAPI.ui.commandPalette.addCommand({
-        label: 'Sidebar - Navigate Down',
+        label: t(extensionAPI, "command.sidebarNavigateDown"),
         callback: () => moveFocus('down'),
         "disable-hotkey": false,
     });
 
     // Command Roam CRM - Open Modal
     extensionAPI.ui.commandPalette.addCommand({
-        label: "Roam CRM - Open Modal",
+        label: t(extensionAPI, "command.openModal"),
         "disable-hotkey": false,
         callback: async () => {
             const allPeople = await getAllPeople(extensionAPI)
@@ -917,17 +917,17 @@ async function onload({ extensionAPI }) {
     })
     // Command Roam CRM - Open Full Page UI
     extensionAPI.ui.commandPalette.addCommand({
-        label: "Roam CRM - Open Full Workspace UI", //TODO come up with a better name for this
+        label: t(extensionAPI, "command.openWorkspace"), //TODO come up with a better name for this
         "disable-hotkey": false,
         callback: async () => {
             const allPeople = await getAllPeople(extensionAPI)
-            displayCRMDialog(allPeople)
+            displayCRMDialog(allPeople, extensionAPI)
         },
     })
     
     // Command Palette Test Calendar Template Matching
     extensionAPI.ui.commandPalette.addCommand({
-        label: "Roam CRM - Test Calendar Template Matching",
+        label: t(extensionAPI, "command.testCalendarTemplate"),
         "disable-hotkey": false,
         callback: async () => {
             const allPeople = await getAllPeople(extensionAPI)
@@ -937,12 +937,12 @@ async function onload({ extensionAPI }) {
             // 3. DOESN'T actually create or update any blocks in Roam
             // 4. DOESN'T save any data to extension storage
             await getEventInfo(allPeople, extensionAPI, true, true, 'manual-template-test')
-            showToast("Template matching test complete - check browser console for results", "SUCCESS")
+            showToast(t(extensionAPI, "toast.templateTestComplete"), "SUCCESS")
         },
     })
     // Command Palette Quick Capture - Create a new DNP block and focus it in the sidebar
     extensionAPI.ui.commandPalette.addCommand({
-        label: "Sidebar - Create new DNP block and focus it in the sidebar",
+        label: t(extensionAPI, "command.sidebarCreateDnpBlock"),
         callback: async () => {
             const todayDate = new Date();
             const dailyNoteUid = window.roamAlphaAPI.util.dateToPageUid(todayDate);
@@ -988,7 +988,7 @@ async function onload({ extensionAPI }) {
     });
     // Command Palette Roam Navigation - Go to last block on page
     extensionAPI.ui.commandPalette.addCommand({
-        label: "Navigation - Go to last block on page", 
+        label: t(extensionAPI, "command.navigationLastBlock"),
         callback: getLastBlockAndFocus,
         "disable-hotkey": false,
     });
