@@ -13,23 +13,25 @@ import IntervalSettings from "./components/list_intervals"
 import displayCRMDialog from "./components/clay"
 import { moveFocus, getLastBlockAndFocus } from './utils';
 import EventKeywordSettings from "./components/event_keyword_settings"
+import SchemaSettings from "./components/schema_settings"
+import { getAgendaPullEntity, getCRMSchema } from "./schema"
 
 const testing = false
 const version = "v2.9.8"
 
-const plugin_title = "Roam CRM"
+const plugin_title = "Roam CRM Custom"
 
 var runners = {
     intervals: [],
     eventListeners: [],
     pullFunctions: [],
+    pullWatches: [],
 }
 
 let googleLoadedHandler
 
 const pullPattern =
     "[:block/_refs :block/uid :node/title {:block/_refs [{:block/refs[:node/title]} :node/title :block/uid :block/string]}]"
-const entity = '[:node/title "Agenda"]'
 
 function versionTextComponent() {
     return React.createElement("div", {}, version)
@@ -43,6 +45,7 @@ function headerTextComponent() {
 function createPanelConfig(extensionAPI, pullFunction) {
     const wrappedIntervalConfig = () => IntervalSettings({ extensionAPI })
     const wrappedEventKeywordConfig = () => EventKeywordSettings({ extensionAPI })
+    const wrappedSchemaConfig = () => SchemaSettings({ extensionAPI })
     return {
         tabTitle: plugin_title,
         settings: [
@@ -50,6 +53,19 @@ function createPanelConfig(extensionAPI, pullFunction) {
                 id: "version-text",
                 name: "Version",
                 action: { type: "reactComponent", component: versionTextComponent },
+            },
+            {
+                id: "schema-header",
+                name: "Schema Settings",
+                action: { type: "reactComponent", component: headerTextComponent },
+            },
+            {
+                id: "schema-settings",
+                name: "Core Field Schema",
+                description:
+                    "Customize the lowercase field names Roam CRM uses for people, agenda, and call templates. Reload Roam after changing agenda fields.",
+                className: "crm-schema-setting",
+                action: { type: "reactComponent", component: wrappedSchemaConfig },
             },
             {
                 id: "event-keywords-header",
@@ -198,23 +214,20 @@ function createPanelConfig(extensionAPI, pullFunction) {
                 id: "agenda-addr-setting",
                 name: "Run the Agenda Addr",
                 description:
-                    "When you make a block anywhere that has as persons name `[[Bill Gates]]` and add the hashtag `#Agenda` Roam CRM will automatically nest a block-ref of that block on Bill's page under an Agenda attribute.",
+                    "When you make a block anywhere that has as persons name `[[Bill Gates]]` and add the hashtag `#agenda` Roam CRM will automatically nest a block-ref of that block on Bill's page under an agenda attribute.",
                 action: {
                     type: "switch",
                     onChange: async (evt) => {
+                        const agendaEntity = getAgendaPullEntity(extensionAPI)
                         if (evt.target.checked) {
                             await parseAgendaPull(
-                                window.roamAlphaAPI.pull(pullPattern, entity),
+                                window.roamAlphaAPI.pull(pullPattern, agendaEntity),
                                 extensionAPI,
                             )
                             // agenda addr pull watch
-                            window.roamAlphaAPI.data.addPullWatch(pullPattern, entity, pullFunction)
+                            addPullWatch(agendaEntity, pullFunction)
                         } else {
-                            window.roamAlphaAPI.data.removePullWatch(
-                                pullPattern,
-                                entity,
-                                pullFunction,
-                            )
+                            removePullWatch(agendaEntity, pullFunction)
                         }
                     },
                 },
@@ -223,7 +236,7 @@ function createPanelConfig(extensionAPI, pullFunction) {
                 id: "agenda-addr-remove-names",
                 name: "Remove #tagged names in Agenda Addr blocks",
                 description:
-                    "In a block tagged [[Agenda]] (and when the Agenda Addr is turned on) If a person's name is tagged with a hashtag ( #[[Steve Jobs]] ), then the tagged name will be auto removed after the Agenda Addr is run.",
+                    "In a block tagged [[agenda]] (and when the Agenda Addr is turned on) If a person's name is tagged with a hashtag ( #[[Steve Jobs]] ), then the tagged name will be auto removed after the Agenda Addr is run.",
                 action: { type: "switch" },
             },
             
@@ -243,7 +256,7 @@ function createPanelConfig(extensionAPI, pullFunction) {
                     type: "button",
                     onClick: async () => {
                         const templatePageUID = await getPageUID("roam/templates")
-                        createPersonTemplates(templatePageUID)
+                        createPersonTemplates(templatePageUID, getCRMSchema(extensionAPI))
                         showToast(`Template Added.`, "SUCCESS")
                     },
                     content: "Import",
@@ -253,13 +266,14 @@ function createPanelConfig(extensionAPI, pullFunction) {
                 id: "call-rollup-query",
                 name: "Import Call Rollup Queries",
                 description:
-                    "Imports the rollup query templates to your `[[Call]]` page. These can be referenced or added to templates as needed.",
+                    "Imports the rollup query templates to your configured `[[call]]` page. These can be referenced or added to templates as needed.",
                 action: {
                     type: "button",
                     onClick: async () => {
-                        const callPageUID = await getPageUID("Call")
-                        createLastMonthCalls(callPageUID)
-                        createLastWeekCalls(callPageUID)
+                        const schema = getCRMSchema(extensionAPI)
+                        const callPageUID = await getPageUID(schema.callPage)
+                        createLastMonthCalls(callPageUID, schema)
+                        createLastWeekCalls(callPageUID, schema)
 
                         showToast(`Templates Added.`, "SUCCESS")
                     },
@@ -275,7 +289,7 @@ function createPanelConfig(extensionAPI, pullFunction) {
                     type: "button",
                     onClick: async () => {
                         const templatePageUID = await getPageUID("roam/templates")
-                        createCallTemplates(templatePageUID)
+                        createCallTemplates(templatePageUID, getCRMSchema(extensionAPI))
                         showToast(`Template Added.`, "SUCCESS")
                     },
                     content: "Import",
@@ -304,7 +318,7 @@ async function crmbutton(extensionAPI) {
             sidebartoprow.parentNode.insertBefore(divCRM, sidebartoprow.nextSibling)
         }
         divCRM.onclick = async () => {
-            const allPeople = await getAllPeople()
+            const allPeople = await getAllPeople(extensionAPI)
             displayCRMDialog(allPeople)
         }
     }
@@ -342,6 +356,18 @@ function addEventListener(target, event, callback) {
     runners.eventListeners.push({ target, event, callback })
 }
 
+function addPullWatch(entity, callback) {
+    window.roamAlphaAPI.data.addPullWatch(pullPattern, entity, callback)
+    runners.pullWatches.push({ entity, callback })
+}
+
+function removePullWatch(entity, callback) {
+    window.roamAlphaAPI.data.removePullWatch(pullPattern, entity, callback)
+    runners.pullWatches = runners.pullWatches.filter(
+        (watch) => watch.entity !== entity || watch.callback !== callback,
+    )
+}
+
 //MARK: onload
 async function onload({ extensionAPI }) {
     const pullFunction = async function a(before, after) {
@@ -354,7 +380,7 @@ async function onload({ extensionAPI }) {
     extensionAPI.settings.panel.create(panelConfig)
     const ts1 = new Date().getTime()
 
-    const people = await getAllPeople()
+    const people = await getAllPeople(extensionAPI)
     // add left sidebar button
     // sidebar-button
     if (getExtensionAPISetting(extensionAPI, "sidebar-button", false)) {
@@ -400,7 +426,7 @@ async function onload({ extensionAPI }) {
                     if (isSecondDateAfter(lastBirthdayCheckDate, todaysDNPUID)) {
                         console.log("New day detected during birthday check interval");
                         // Get an updated list of people
-                        const updatedPeople = await getAllPeople();
+                        const updatedPeople = await getAllPeople(extensionAPI);
                         // Run the birthday checks - this will update DNP and show modal if needed
                         await displayBirthdays(updatedPeople, lastBirthdayCheckDate, extensionAPI);
                         // Update the last birthday check date
@@ -455,7 +481,7 @@ async function onload({ extensionAPI }) {
                 if (isSecondDateAfter(lastBirthdayCheckDate, todaysDNPUID)) {
                     console.log("New day detected during hourly check, running birthday checks");
                     // Get an updated list of people
-                    const updatedPeople = await getAllPeople();
+                    const updatedPeople = await getAllPeople(extensionAPI);
                     // Display birthdays in modal (if appropriate)
                     await displayBirthdays(updatedPeople, lastBirthdayCheckDate, extensionAPI);
                     // Update the last birthday check date
@@ -507,7 +533,7 @@ async function onload({ extensionAPI }) {
                         if (isSecondDateAfter(lastBirthdayCheckDate, todaysDNPUID)) {
                             console.log("Running birthday checks after visibility change");
                             // Get an updated list of people since we might have been away for a while
-                            getAllPeople().then(updatedPeople => {
+                            getAllPeople(extensionAPI).then(updatedPeople => {
                                 displayBirthdays(updatedPeople, lastBirthdayCheckDate, extensionAPI);
                                 // Update the last birthday check date
                                 extensionAPI.settings.set(
@@ -559,7 +585,7 @@ async function onload({ extensionAPI }) {
                     console.log("Displaying birthdays after visibility change");
                     
                     // Get fresh data since we might have been away for a while
-                    getAllPeople().then(async updatedPeople => {
+                    getAllPeople(extensionAPI).then(async updatedPeople => {
                         await displayBirthdays(updatedPeople, lastBirthdayCheckDate, extensionAPI);
                         
                         // Update last check date
@@ -879,7 +905,7 @@ async function onload({ extensionAPI }) {
         label: "Roam CRM - Open Modal",
         "disable-hotkey": false,
         callback: async () => {
-            const allPeople = await getAllPeople()
+            const allPeople = await getAllPeople(extensionAPI)
             const lastBirthdayCheckDate = getExtensionAPISetting(
                 extensionAPI,
                 "last-birthday-check-date",
@@ -894,7 +920,7 @@ async function onload({ extensionAPI }) {
         label: "Roam CRM - Open Full Workspace UI", //TODO come up with a better name for this
         "disable-hotkey": false,
         callback: async () => {
-            const allPeople = await getAllPeople()
+            const allPeople = await getAllPeople(extensionAPI)
             displayCRMDialog(allPeople)
         },
     })
@@ -904,7 +930,7 @@ async function onload({ extensionAPI }) {
         label: "Roam CRM - Test Calendar Template Matching",
         "disable-hotkey": false,
         callback: async () => {
-            const allPeople = await getAllPeople()
+            const allPeople = await getAllPeople(extensionAPI)
             // This command runs in testing mode (true) which:
             // 1. Shows detailed log output in console about keyword matching
             // 2. Processes single-person events according to your keyword settings
@@ -968,11 +994,12 @@ async function onload({ extensionAPI }) {
     });
     //MARK: agenda addr
     if (getExtensionAPISetting(extensionAPI, "agenda-addr-setting", false)) {
+        const agendaEntity = getAgendaPullEntity(extensionAPI)
         // run the initial agenda addr
-        await parseAgendaPull(window.roamAlphaAPI.pull(pullPattern, entity), extensionAPI)
+        await parseAgendaPull(window.roamAlphaAPI.pull(pullPattern, agendaEntity), extensionAPI)
 
         // agenda addr pull watch
-        window.roamAlphaAPI.data.addPullWatch(pullPattern, entity, pullFunction)
+        addPullWatch(agendaEntity, pullFunction)
     }
 
     if (!testing) {
@@ -984,9 +1011,11 @@ function onunload() {
     document.body.removeEventListener("roamjs:google:loaded", googleLoadedHandler)
 
     // remove pull watches
-    for (let i = 0; i < runners.pullFunctions.length; i++) {
-        window.roamAlphaAPI.data.removePullWatch(pullPattern, entity, runners.pullFunctions[i])
+    for (let i = 0; i < runners.pullWatches.length; i++) {
+        const { entity, callback } = runners.pullWatches[i]
+        window.roamAlphaAPI.data.removePullWatch(pullPattern, entity, callback)
     }
+    runners.pullWatches = []
     runners.pullFunctions = [] // Clear the array after stopping all intervals
 
     // remove the sidebar button

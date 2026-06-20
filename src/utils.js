@@ -62,13 +62,13 @@ export function getBlockUidByContainsTextOnPage(text, page) {
     let result = window.roamAlphaAPI.q(query, page, text).flat()
 
     if (result.length === 0) {
-        // Agenda:: block doesn't exist on the person's page so we need to make it
+        // Configured agenda attribute block doesn't exist on the person's page so we need to make it
         const newUID = window.roamAlphaAPI.util.generateUID()
         const pageUID = window.roamAlphaAPI.data.pull("[:block/uid]", `[:node/title \"${page}\"]`)[
             ":block/uid"
         ]
 
-        // create Agenda:: block
+        // create configured agenda attribute block
         window.roamAlphaAPI.createBlock({
             location: { "parent-uid": pageUID, order: "last" },
             block: { string: text, uid: newUID },
@@ -76,7 +76,7 @@ export function getBlockUidByContainsTextOnPage(text, page) {
 
         return newUID
     } else {
-        // Return the uid of the first block that contains Agenda::
+        // Return the uid of the first block that contains the configured agenda attribute
         return result[0].uid
     }
 }

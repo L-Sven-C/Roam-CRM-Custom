@@ -9,7 +9,21 @@ import {
     getExtensionAPISetting,
     getPageUID
 } from "./utils"
+import {
+    createAgendaRegex,
+    createAttributeText,
+    createHashTagRegex,
+    getCRMSchema,
+} from "./schema"
 import { differenceInYears, parse, isValid, setYear, addYears, startOfDay, differenceInDays } from 'date-fns';
+
+const PERSON_ATTRIBUTE_DEFINITIONS = [
+    { schemaKey: "birthdayAttribute", personKey: "Birthday" },
+    { schemaKey: "contactFrequencyAttribute", personKey: "Contact Frequency" },
+    { schemaKey: "lastContactedAttribute", personKey: "Last Contacted" },
+    { schemaKey: "emailAttribute", personKey: "Email" },
+    { schemaKey: "relationshipMetadataAttribute", personKey: "Relationship Metadata" },
+]
 
 function checkBatchContactSetting(extensionAPI) {
     const userSetting = extensionAPI.settings.get("batch-contact-notification") || "No Batch"
@@ -110,15 +124,17 @@ export function getAllPageRefEvents(pages) {
     })
     return blockRefEvents
 }
-export async function getAllPeople() {
+export async function getAllPeople(extensionAPI) {
+    const schema = getCRMSchema(extensionAPI)
     let query = `[:find (pull ?PAGE [:attrs/lookup
                                   :block/string
                                   :block/uid
                                   :node/title
                                   {:attrs/lookup [:block/string :block/uid]} ])
+                :in $ ?tagAttribute ?personTagPage
                 :where 
-                  [?Tags-Ref :node/title "Tags"]
-                  [?person-Ref :node/title "people"]
+                  [?Tags-Ref :node/title ?tagAttribute]
+                  [?person-Ref :node/title ?personTagPage]
                   [?PEOPLEdec :block/refs ?Tags-Ref]
                   [?PEOPLEdec :block/refs ?person-Ref]
                   [?PEOPLEdec :block/page ?PAGE]
@@ -130,7 +146,11 @@ export async function getAllPeople() {
                   )
                 ]`
 
-    let results = await window.roamAlphaAPI.q(query).flat()
+    let results = await window.roamAlphaAPI.q(
+        query,
+        schema.tagAttribute,
+        schema.personTagPage,
+    ).flat()
 
     function extractElementsWithKeywords(data, keywords) {
         return data.map((item) => {
@@ -164,12 +184,15 @@ export async function getAllPeople() {
         })
     }
 
-    function extractAttributes(data, keywords) {
+    function extractAttributes(data, attributeDefinitions) {
         return data.map((item) => {
             // Initialize an object with empty arrays for each keyword
-            const attributes = keywords.reduce((acc, keyword) => {
-                const key = keyword.replace(/::/g, "").trim();
-                acc[key] = [];
+            const attributes = attributeDefinitions.reduce((acc, definition) => {
+                acc[definition.personKey] = [];
+                return acc;
+            }, {});
+            const configuredAttributes = attributeDefinitions.reduce((acc, definition) => {
+                acc[schema[definition.schemaKey]] = definition.personKey;
                 return acc;
             }, {});
 
@@ -182,13 +205,11 @@ export async function getAllPeople() {
                             const [, key, value] = match;
                             const trimmedKey = key.trim();
 
-                            // If the key doesn't exist in attributes, create it
-                            if (!attributes.hasOwnProperty(trimmedKey)) {
-                                attributes[trimmedKey] = [];
-                            }
+                            const personKey = configuredAttributes[trimmedKey];
+                            if (!personKey) return;
 
                             // Add the lookup item to the appropriate key
-                            attributes[trimmedKey].push({
+                            attributes[personKey].push({
                                 ...lookupItem,
                                 value: value.trim()
                             });
@@ -205,18 +226,12 @@ export async function getAllPeople() {
         });
     }
 
-    // Define the attributes to extract for
-    const important_keywords = [
-        "Birthday::",
-        "Contact Frequency::",
-        "Last Contacted::",
-        "Email::",
-        "Relationship Metadata::",
-    ]
     // let peopleList = extractElementsWithKeywords(results, important_keywords)
-    let peopleList = extractAttributes(results, important_keywords);
+    let peopleList = extractAttributes(results, PERSON_ATTRIBUTE_DEFINITIONS);
 
-    const fixedPeopleList = peopleList.map(fixPersonJSON)
+    const fixedPeopleList = await Promise.all(
+        peopleList.map((person) => fixPersonJSON(person, schema)),
+    )
 
     return fixedPeopleList
 }
@@ -290,12 +305,42 @@ function checkBirthdays(person) {
     return { aAndBBirthdaysToday: null, otherBirthdaysToday: null, filteredUpcomingBirthdays: null };
 }
 
-function fixPersonJSON(person) {
+function getAttributeValue(attributeBlock) {
+    const match = attributeBlock?.string?.match(/^([^:]+)::(.*)$/)
+    return match ? match[2].replace(/\[|\]/g, "") : ""
+}
+
+async function ensureRelationshipMetadataBlock(person, schema) {
+    if (!person["Relationship Metadata"]) {
+        person["Relationship Metadata"] = []
+    }
+
+    if (person["Relationship Metadata"][0]) {
+        return person["Relationship Metadata"][0].uid
+    }
+
+    const relationshipMetadataUID = window.roamAlphaAPI.util.generateUID()
+    await createBlock({
+        node: {
+            text: createAttributeText(schema, "relationshipMetadataAttribute"),
+            uid: relationshipMetadataUID,
+        },
+        parentUid: person.uid,
+    })
+    person["Relationship Metadata"].push({
+        string: createAttributeText(schema, "relationshipMetadataAttribute"),
+        uid: relationshipMetadataUID,
+    })
+
+    return relationshipMetadataUID
+}
+
+async function fixPersonJSON(person, schema) {
     // parse through raw strings and extract important info
 
     const birthdayDateString =
         person["Birthday"].length > 0
-            ? person["Birthday"][0].string.split("::", 2)[1].replace(/\[|\]/g, "") || ""
+            ? getAttributeValue(person["Birthday"][0]) || ""
             : ""
     const birthday = parseStringToDate(birthdayDateString.trim()) || null
     // console.log(person.title, birthdayDateString,birthday);
@@ -307,8 +352,7 @@ function fixPersonJSON(person) {
 
     // Check if person["Last Contacted"] is not empty
     if (person["Last Contacted"].length > 0) {
-        contactDateString =
-            person["Last Contacted"][0].string.split("::", 2)[1].replace(/\[|\]/g, "") || null
+        contactDateString = getAttributeValue(person["Last Contacted"][0]) || null
         if (contactDateString === null) {
             last_contact = new Date()
         } else {
@@ -321,40 +365,18 @@ function fixPersonJSON(person) {
         contactDateString = roamAlphaAPI.util.dateToPageTitle(new Date())
         last_contact = parseStringToDate(contactDateString.trim()) || new Date()
 
-        // Check if Relationship Metadata and property exist
-        if (person && person["Relationship Metadata"] && person["Relationship Metadata"][0]) {
-            // If the object and property exist, create a child
-            createBlock({
-                node: {
-                    text: `Last Contacted:: [[${contactDateString}]]`,
-                    uid: contactUIDString,
-                },
-                parentUid: person["Relationship Metadata"][0].uid,
-            })
-        } else {
-            // If the object or property does not exist, create both the parent and the child
-            newRelationshipUID = window.roamAlphaAPI.util.generateUID()
-            createBlock({
-                node: {
-                    text: `Relationship Metadata::`,
-                    uid: newRelationshipUID,
-                    children: [
-                        {
-                            text: `Last Contacted:: [[${contactDateString}]]`,
-                            uid: contactUIDString,
-                        },
-                    ],
-                },
-                parentUid: person.uid,
-            })
-            person["Relationship Metadata"].push({
-                string: "Relationship Metadata::",
-                uid: newRelationshipUID,
-            })
-            person["Last Contacted"].push({ string: "Last Contacted::", uid: contactUIDString })
-
-            //  code here for when the property does not exist
-        }
+        const relationshipMetadataUID = await ensureRelationshipMetadataBlock(person, schema)
+        await createBlock({
+            node: {
+                text: createAttributeText(schema, "lastContactedAttribute", `[[${contactDateString}]]`),
+                uid: contactUIDString,
+            },
+            parentUid: relationshipMetadataUID,
+        })
+        person["Last Contacted"].push({
+            string: createAttributeText(schema, "lastContactedAttribute"),
+            uid: contactUIDString,
+        })
     }
 
     let contact
@@ -363,15 +385,24 @@ function fixPersonJSON(person) {
     if (person["Contact Frequency"].length === 0) {
         // there is no contact frequency node so add one
         const contactFrequenceUID = window.roamAlphaAPI.util.generateUID()
-        createBlock({
+        const relationshipMetadataUID = await ensureRelationshipMetadataBlock(person, schema)
+        await createBlock({
             node: {
-                text: `Contact Frequency:: #[[C List]]: Contact every six months`,
+                text: createAttributeText(
+                    schema,
+                    "contactFrequencyAttribute",
+                    "#[[C List]]: Contact every six months",
+                ),
                 uid: contactFrequenceUID,
             },
-            parentUid: person["Relationship Metadata"][0].uid,
+            parentUid: relationshipMetadataUID,
         })
         person["Contact Frequency"].push({
-            string: `Contact Frequency:: #[[C List]]: Contact every six months`,
+            string: createAttributeText(
+                schema,
+                "contactFrequencyAttribute",
+                "#[[C List]]: Contact every six months",
+            ),
             uid: contactFrequenceUID,
         })
         contact = "C List"
@@ -582,6 +613,9 @@ async function remindersSystem(people, lastBirthdayCheck, extensionAPI) {
 
 //MARK:Agenda Addr
 export async function parseAgendaPull(after, extensionAPI) {
+    const schema = getCRMSchema(extensionAPI)
+    const agendaRegex = createAgendaRegex(schema)
+
     // Function to clean up the original block while preserving newlines
     function cleanUpBlock(blockUID, blockString) {
         // Split the string by newlines to preserve them
@@ -600,9 +634,6 @@ export async function parseAgendaPull(after, extensionAPI) {
         })
     }
 
-    // Precompile the regex
-    const agendaRegex = /\[\[Agenda\]\]|\#Agenda|\#\[\[Agenda\]\]/g
-
     // Function to create a TODO block
     function createTodoBlock(sourceUID, personAgendaBlock) {
         const newBlockString = `{{[[TODO]]}} ((${sourceUID}))`
@@ -617,7 +648,7 @@ export async function parseAgendaPull(after, extensionAPI) {
     function removeTagFromBlock(blockString, pageName) {
         if (!blockString || !pageName) return blockString;
         
-        const varRegex = new RegExp(`#${pageName}|#\\[\\[${pageName}\\]\\]`, "g")
+        const varRegex = createHashTagRegex(pageName)
     
         return blockString
             .split('\n')
@@ -634,22 +665,22 @@ export async function parseAgendaPull(after, extensionAPI) {
         const filteredBlocks = agendaBlocks.filter((block) => {
             // Check if ":block/refs" key exists and has at least 2 refs
             const hasRefs = block[":block/refs"] && block[":block/refs"].length >= 2
-            // Check if ":block/string" does not start with "Agenda::"
-            const doesNotStartWithAgenda = !block[":block/string"].startsWith("Agenda::")
+            const agendaAttributeText = createAttributeText(schema, "agendaAttribute")
+            const doesNotStartWithAgenda = !block[":block/string"].startsWith(agendaAttributeText)
 
             // Return true if both conditions are met
             return hasRefs && doesNotStartWithAgenda
         })
 
         if (filteredBlocks.length > 0) {
-            const people = await getAllPeople()
+            const people = await getAllPeople(extensionAPI)
 
             for (const block of filteredBlocks) {
                 // pull out the block string to create a source of truth through the changes
                 let blockString = block[":block/string"]
 
                 const relevantRefs = block[":block/refs"].filter(
-                    (ref) => ref[":node/title"] !== "Agenda"
+                    (ref) => ref[":node/title"] !== schema.agendaPage
                 )
 
                 for (const ref of relevantRefs) {
@@ -661,7 +692,7 @@ export async function parseAgendaPull(after, extensionAPI) {
 
                     if (matchingPerson) {
                         const personAgendaBlock = getBlockUidByContainsTextOnPage(
-                            "Agenda::",
+                            createAttributeText(schema, "agendaAttribute"),
                             matchingPerson.title
                         )
                         createTodoBlock(block[":block/uid"], personAgendaBlock)
@@ -679,7 +710,7 @@ export async function parseAgendaPull(after, extensionAPI) {
                             })
                         }
 
-                        // remove the #Agenda block while preserving newlines
+                        // remove the agenda tag while preserving newlines
                         cleanUpBlock(block[":block/uid"], blockString)
                     }
                 }

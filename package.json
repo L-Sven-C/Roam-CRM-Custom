@@ -1,5 +1,5 @@
 {
-    "name": "roam-depot-roam-crm",
+    "name": "roam-depot-roam-crm-custom",
     "version": "2.9.8",
     "description": "Roam Research Plugin",
     "main": "index.js",

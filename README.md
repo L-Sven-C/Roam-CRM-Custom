@@ -1,11 +1,13 @@
-# Roam CRM
+# Roam CRM Custom
 
 Roam CRM turns your graph into a _Relationship Management_ tool. Inspired by [Sivers](https://sive.rs/hundreds), and David Rockefeller's collection of [200,000 index cards](https://archive.is/zxbCA), Roam CRM keeps people and dates important to you top of mind.
+
+This fork is based on [8bitgentleman/roam-depot-Roam-CRM](https://github.com/8bitgentleman/roam-depot-Roam-CRM) and keeps the original MIT license and copyright notice.
 
 ## Usage Example
 
 > **NOTE**  
-> There are certain tags and templates that Roam CRM relies on; **Tags:: #people** and **#Agenda** are the most vital. While these are not currently customizable they may be in the future.
+> This fork defaults to lowercase, singular CRM fields. The minimum contact marker is `metadata::` with `tag:: #person`; Agenda Addr defaults to `#agenda` and `agenda::`. These core field names can be changed in **Schema Settings**.
 
 ## Setup
 
@@ -33,13 +35,13 @@ Roam CRM is built on top of several Roam extensions. Please install them on Roam
 -   [Query Builder](https://github.com/dvargas92495/roamjs-query-builder) by David Vargas
 
     1. Install Query Builder extension
-    2. Import Call Rollup Queries from Roam CRM's settings page.
+    2. Import call rollup queries from Roam CRM Custom's settings page.
 
 ## Features
 
 ### Metadata
 
--   Roam CRM creates metadata for each `Tags::#people` page inspired by [Matt Mochary](https://docs.google.com/spreadsheets/d/1Ti_xaV9IVvj-bklxOjNY-IeGsC-YqcgvB03qvfFQrnI/). This metadata and its structure is important, **without this structure Roam CRM will not work.**
+-   Roam CRM Custom recognizes each contact through the configured person marker. By default, a contact page needs `metadata::` with a child block `tag:: #person`. This metadata and its structure is important, **without this structure Roam CRM will not work.**
 -   Each person page must have metadata structure which looks like this. You can use the **Person Metadata Template** button in the Roam CRM settings to import a quick Roam template for this metadata structure
     -   <img src="https://github.com/8bitgentleman/roam-depot-Roam-CRM/raw/main/images/metadata.png" width="300"></img>
         <!-- FIXME UPDATE IMAGE PATH ONCE MERGED-->
@@ -50,9 +52,9 @@ Roam CRM is built on top of several Roam extensions. Please install them on Roam
 
 Inefficient leaders waste a lot of time reaching out about or responding to one-off issues in real time. A much more efficient method is to batch your issues and discuss them all at once.
 
--   Make a block anywhere that has as persons name (`[[Bill Gates]]` for example) and a hashtag `#Agenda`
+-   Make a block anywhere that has as persons name (`[[Bill Gates]]` for example) and a hashtag `#agenda`
 -   Roam CRM will automatically nest a block ref on Bill's page under an agenda attribute
--   Use a hashtag to have the extension hide the name in the Agenda, e.g. `#[[Bill Gates]]`
+-   Use a hashtag to have the extension hide the name in the agenda, e.g. `#[[Bill Gates]]`
 -   Next time you talk, you'll remember everything you wanted to tell Bill
 
 -   <img src="https://github.com/8bitgentleman/roam-depot-Roam-CRM/raw/main/images/agendaAddr.gif" width="600"></img>

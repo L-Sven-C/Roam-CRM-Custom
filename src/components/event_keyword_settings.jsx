@@ -16,6 +16,7 @@ import {
 } from "@blueprintjs/core"
 import { showToast } from "./toast"
 import { getSmartblockWorkflows } from "../utils"
+import { getDefaultEventKeywords } from "../schema"
 
 /**
  * Component for managing event keywords in Roam CRM extension settings
@@ -24,29 +25,6 @@ import { getSmartblockWorkflows } from "../utils"
  * @param {Object} props.extensionAPI The Roam Depot extension API
  */
 function EventKeywordSettings({ extensionAPI }) {
-  // Default keywords for reference and backward compatibility
-  const DEFAULT_EVENT_KEYWORDS = [
-    {
-      term: "1:1",
-      requiresMultipleAttendees: true,
-      template: "[[1:1]] with {attendees}",
-      priority: 1
-    },
-    {
-      term: "dinner",
-      requiresMultipleAttendees: true,
-      template: "[[Dinner]] with {attendees}",
-      priority: 2
-    },
-    {
-      term: "", // Empty term means this is the fallback/default
-      requiresMultipleAttendees: true,
-      template: "[[Call]] with {attendees}",
-      priority: 999,
-      isDefault: true
-    }
-  ]
-
   // State for keywords and form
   const [keywords, setKeywords] = useState([])
   const [editingIndex, setEditingIndex] = useState(null)
@@ -69,7 +47,7 @@ function EventKeywordSettings({ extensionAPI }) {
     const savedKeywords = extensionAPI.settings.get("event-keywords")
     console.log("Loaded keywords", savedKeywords);
     
-    setKeywords(savedKeywords || DEFAULT_EVENT_KEYWORDS)
+    setKeywords(savedKeywords || getDefaultEventKeywords(extensionAPI))
     
     // Load available smartblock workflows
     const workflows = getSmartblockWorkflows()
@@ -234,7 +212,7 @@ function EventKeywordSettings({ extensionAPI }) {
   // Reset to default keywords
   const handleResetToDefaults = () => {
     if (window.confirm("Are you sure you want to reset to default keywords? This will delete all custom keywords.")) {
-      saveKeywords(DEFAULT_EVENT_KEYWORDS)
+      saveKeywords(getDefaultEventKeywords(extensionAPI))
       showToast("Reset to default keywords", "SUCCESS")
     }
   }

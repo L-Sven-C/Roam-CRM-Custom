@@ -18,6 +18,7 @@ import updateBlock from "roamjs-components/writes/updateBlock"
 import createBlock from "roamjs-components/writes/createBlock"
 import displayCRMDialog from "./clay"
 import { getExtensionAPISetting } from "../utils"
+import { createAttributeText, getCRMSchema } from "../schema"
 
 const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionAPI }) => {
     // State to store the reminders data
@@ -58,7 +59,11 @@ const BirthdayDrawer = ({ onClose, isOpen, people, lastBirthdayCheck, extensionA
         // update the attribute when the checkbox is clicked
         updateBlock({
             uid: contactName.last_contact_uid,
-            text: `Last Contacted:: [[${dt}]]`,
+            text: createAttributeText(
+                getCRMSchema(extensionAPI),
+                "lastContactedAttribute",
+                `[[${dt}]]`,
+            ),
         })
 
         setCheckedContacts((prev) => {

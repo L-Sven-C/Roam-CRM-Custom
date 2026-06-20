@@ -8,7 +8,7 @@ The Customizable Event Keywords feature allows you to customize how calendar eve
 Events are matched against keywords in the following priority order:
 1. The system looks for specific keywords in the event title (e.g., "1:1", "dinner")
 2. If a match is found, it uses the corresponding template
-3. If no match is found, it falls back to the default template (currently "Call")
+3. If no match is found, it falls back to the default template (currently the configured `call` page)
 
 Each keyword has these properties:
 - `term`: The text to look for in the event title

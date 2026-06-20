@@ -2,6 +2,12 @@ import createBlock from "roamjs-components/writes/createBlock"
 import updateBlock from "roamjs-components/writes/updateBlock"
 import { showToast } from "./components/toast"
 import { getExtensionAPISetting, getPageUID, getSmartblockWorkflows } from "./utils"
+import {
+    createAttributeText,
+    createPageRef,
+    getCRMSchema,
+    getDefaultEventKeywords,
+} from "./schema"
 
 function extractEmailFromString(text) {
     // Regular expression for matching an email address
@@ -69,31 +75,9 @@ function checkStringForSubstring(summary, substring) {
     }
 }
 
-// Default keyword settings for event templates
-const DEFAULT_EVENT_KEYWORDS = [
-    {
-        term: "1:1",
-        requiresMultipleAttendees: true,
-        template: "[[1:1]] with {attendees}",
-        priority: 1
-    },
-    {
-        term: "dinner",
-        requiresMultipleAttendees: true,
-        template: "[[Dinner]] with {attendees}",
-        priority: 2
-    },
-    {
-        term: "", // Empty term means this is the fallback/default
-        requiresMultipleAttendees: true,
-        template: "[[Call]] with {attendees}",
-        priority: 999,
-        isDefault: true
-    }
-];
-
 // Helper to get keywords with backwards compatibility
 function getEventKeywords(extensionAPI) {
+    const defaultEventKeywords = getDefaultEventKeywords(extensionAPI)
     // Direct check of raw setting value
     const directValue = extensionAPI.settings.get("event-keywords");
     console.log('getEventKeywords - raw value:', directValue);
@@ -101,8 +85,8 @@ function getEventKeywords(extensionAPI) {
     // Use default if no saved settings
     if (!directValue) {
         console.warn('No saved keywords found, using defaults');
-        console.warn('DEFAULT_EVENT_KEYWORDS:', DEFAULT_EVENT_KEYWORDS);
-        return DEFAULT_EVENT_KEYWORDS;
+        console.warn('DEFAULT_EVENT_KEYWORDS:', defaultEventKeywords);
+        return defaultEventKeywords;
     }
 
     // Check if any keywords have requiresMultipleAttendees=false
@@ -174,8 +158,11 @@ function convertEventDateFormats(start) {
 }
 
 // MARK: check for empty call template
-function isEmptyCallTemplate(blockUid, storedEvent) {
+function isEmptyCallTemplate(blockUid, storedEvent, extensionAPI) {
     try {
+        const schema = getCRMSchema(extensionAPI)
+        const notesAttributeText = createAttributeText(schema, "notesAttribute")
+        const nextActionsAttributeText = createAttributeText(schema, "nextActionsAttribute")
         
         // If this is from a SmartBlock template, we should be more cautious
         if (storedEvent && storedEvent.useSmartblock && storedEvent.smartblockUid) {
@@ -202,7 +189,7 @@ function isEmptyCallTemplate(blockUid, storedEvent) {
 
         } else {
             // Fallback for backward compatibility with old stored events
-            if (!blockString.includes("[[Call]]") && 
+            if (!blockString.includes(createPageRef(schema.callPage)) && 
                 !blockString.includes("[[1:1]]") && 
                 !blockString.includes("[[Meeting]]") && 
                 !blockString.includes("[[Dinner]]")) {
@@ -228,9 +215,9 @@ function isEmptyCallTemplate(blockUid, storedEvent) {
 
             const childString = child[":block/string"] || "";
             
-            if (childString.startsWith("Notes::")) {
+            if (childString.startsWith(notesAttributeText)) {
                 notesBlock = child;
-            } else if (childString.startsWith("Next Actions::")) {
+            } else if (childString.startsWith(nextActionsAttributeText)) {
                 nextActionsBlock = child;
             } else if (childString === "---" || childString.trim() === "---") {
                 // Ignore separator blocks
@@ -544,7 +531,7 @@ export async function getEventInfo(people, extensionAPI, testing, isManualSync =
 
                     // Check if this is an empty call template before deleting
                     // Pass the stored event data to help with SmartBlock detection
-                    if (isEmptyCallTemplate(blockUid, storedEvent).result) {
+                    if (isEmptyCallTemplate(blockUid, storedEvent, extensionAPI).result) {
                         // Delete the block
                         if (!testing) {
                             window.roamAlphaAPI.data.block.delete({
@@ -1067,6 +1054,7 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
     let eventDatePage = window.roamAlphaAPI.util.dateToPageTitle(new Date(event.start.dateTime || event.start.date))
     let useSmartblock = false
     let smartblockUid = null
+    const schema = getCRMSchema(extensionAPI)
 
     console.log('=== RAW EVENT DEBUGGING ===');
     console.log('Event data:', event);
@@ -1088,7 +1076,7 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
 
             updateBlock({
                 uid: person[0]["Last Contacted"][0].uid,
-                text: `Last Contacted:: [[${eventDatePage}]]`,
+                text: createAttributeText(schema, "lastContactedAttribute", `[[${eventDatePage}]]`),
             })
         } else {
             attendeeNames.push(a.email)
@@ -1210,7 +1198,12 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
         } else {
             // Ultimate fallback for multi-person events
             console.log('No matching keyword or default - using hardcoded multi-person template');
-            headerString = formatTemplate("[[Call]] with {attendees}", attendeeNames, event.summary, includeEventTitle);
+            headerString = formatTemplate(
+                `${createPageRef(schema.callPage)} with {attendees}`,
+                attendeeNames,
+                event.summary,
+                includeEventTitle,
+            );
         }
     }
 
@@ -1234,8 +1227,8 @@ function createEventBlocks(event, attendees, people, extensionAPI) {
 
             // Add the standard Notes and Next Actions blocks for regular templates
             childrenBlocks = [
-                { text: "Notes::", children: [{ text: "" }] },
-                { text: `Next Actions::`, children: [{ text: "" }] },
+                { text: createAttributeText(schema, "notesAttribute"), children: [{ text: "" }] },
+                { text: createAttributeText(schema, "nextActionsAttribute"), children: [{ text: "" }] },
             ];
         }
     }

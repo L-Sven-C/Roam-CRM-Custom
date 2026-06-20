@@ -1,10 +1,20 @@
 import createBlock from "roamjs-components/writes/createBlock"
+import {
+    DEFAULT_CRM_SCHEMA,
+    createAttributeText,
+    createHashTag,
+    createPageRef,
+} from "../schema"
 
-function createLastWeekCalls(parentUid) {
+function createLastWeekCalls(parentUid, schema = DEFAULT_CRM_SCHEMA) {
+    const callPage = schema.callPage
+    const notesAttribute = schema.notesAttribute
+    const nextActionsAttribute = schema.nextActionsAttribute
+
     createBlock({
         parentUid: parentUid,
         node: {
-            text: `Calls in the Last Week`,
+            text: `${callPage} blocks in the last week`,
             heading: 1,
             open: false,
             children: [
@@ -41,7 +51,7 @@ function createLastWeekCalls(parentUid) {
                                     text: `views`,
                                     children: [
                                         {
-                                            text: `Notes`,
+                                            text: notesAttribute,
                                             children: [
                                                 {
                                                     text: `link`,
@@ -49,7 +59,7 @@ function createLastWeekCalls(parentUid) {
                                             ],
                                         },
                                         {
-                                            text: `Next Actions`,
+                                            text: nextActionsAttribute,
                                             children: [
                                                 {
                                                     text: `embed`,
@@ -134,7 +144,7 @@ function createLastWeekCalls(parentUid) {
                                                     text: `target`,
                                                     children: [
                                                         {
-                                                            text: `Call`,
+                                                            text: callPage,
                                                         },
                                                     ],
                                                 },
@@ -163,7 +173,7 @@ function createLastWeekCalls(parentUid) {
                                                     text: `target`,
                                                     children: [
                                                         {
-                                                            text: `Next Actions`,
+                                                            text: nextActionsAttribute,
                                                         },
                                                     ],
                                                 },
@@ -221,7 +231,7 @@ function createLastWeekCalls(parentUid) {
                                                     text: `target`,
                                                     children: [
                                                         {
-                                                            text: `Next Actions:`,
+                                                            text: `${nextActionsAttribute}:`,
                                                         },
                                                     ],
                                                 },
@@ -267,11 +277,15 @@ function createLastWeekCalls(parentUid) {
     })
 }
 
-function createLastMonthCalls(parentUid) {
+function createLastMonthCalls(parentUid, schema = DEFAULT_CRM_SCHEMA) {
+    const callPage = schema.callPage
+    const notesAttribute = schema.notesAttribute
+    const nextActionsAttribute = schema.nextActionsAttribute
+
     createBlock({
         parentUid: parentUid,
         node: {
-            text: `Calls in the Last Month`,
+            text: `${callPage} blocks in the last month`,
             heading: 1,
             children: [
                 {
@@ -307,7 +321,7 @@ function createLastMonthCalls(parentUid) {
                                     text: `views`,
                                     children: [
                                         {
-                                            text: `Notes`,
+                                            text: notesAttribute,
                                             children: [
                                                 {
                                                     text: `link`,
@@ -315,7 +329,7 @@ function createLastMonthCalls(parentUid) {
                                             ],
                                         },
                                         {
-                                            text: `Next Actions`,
+                                            text: nextActionsAttribute,
                                             children: [
                                                 {
                                                     text: `embed`,
@@ -400,7 +414,7 @@ function createLastMonthCalls(parentUid) {
                                                     text: `target`,
                                                     children: [
                                                         {
-                                                            text: `Call`,
+                                                            text: callPage,
                                                         },
                                                     ],
                                                 },
@@ -429,7 +443,7 @@ function createLastMonthCalls(parentUid) {
                                                     text: `target`,
                                                     children: [
                                                         {
-                                                            text: `Next Actions`,
+                                                            text: nextActionsAttribute,
                                                         },
                                                     ],
                                                 },
@@ -487,7 +501,7 @@ function createLastMonthCalls(parentUid) {
                                                     text: `target`,
                                                     children: [
                                                         {
-                                                            text: `Next Actions:`,
+                                                            text: `${nextActionsAttribute}:`,
                                                         },
                                                     ],
                                                 },
@@ -533,7 +547,7 @@ function createLastMonthCalls(parentUid) {
     })
 }
 
-function createCallTemplates(parentUid) {
+function createCallTemplates(parentUid, schema = DEFAULT_CRM_SCHEMA) {
     createBlock({
         parentUid: parentUid,
         order: "last",
@@ -541,10 +555,10 @@ function createCallTemplates(parentUid) {
             text: `call template #SmartBlock`,
             children: [
                 {
-                    text: `[[Call]] with `,
+                    text: `${createPageRef(schema.callPage)} with `,
                     children: [
                         {
-                            text: `Notes::`,
+                            text: createAttributeText(schema, "notesAttribute"),
                             children: [
                                 {
                                     text: ` `,
@@ -552,7 +566,7 @@ function createCallTemplates(parentUid) {
                             ],
                         },
                         {
-                            text: `Next Actions::`,
+                            text: createAttributeText(schema, "nextActionsAttribute"),
                             children: [
                                 {
                                     text: ` `,
@@ -566,7 +580,7 @@ function createCallTemplates(parentUid) {
     })
 }
 
-function createPersonTemplates(parentUid) {
+function createPersonTemplates(parentUid, schema = DEFAULT_CRM_SCHEMA) {
     createBlock({
         parentUid: parentUid,
         order: "last",
@@ -574,43 +588,47 @@ function createPersonTemplates(parentUid) {
             text: `person metadata #SmartBlock`,
             children: [
                 {
-                    text: `Metadata::`,
+                    text: createAttributeText(schema, "metadataAttribute"),
                     children: [
-                        { text: `Phone Number::` },
-                        { text: `Email::` },
-                        { text: `Location::` },
-                        { text: `Company::` },
-                        { text: `Role::` },
-                        { text: `How We Met::` },
-                        { text: `Social Media::` },
-                        { text: `Tags::#people ` },
+                        { text: `phone number::` },
+                        { text: createAttributeText(schema, "emailAttribute") },
+                        { text: `location::` },
+                        { text: `company::` },
+                        { text: `role::` },
+                        { text: `how we met::` },
+                        { text: `social media::` },
+                        { text: createAttributeText(schema, "tagAttribute", createHashTag(schema.personTagPage)) },
                     ],
                 },
                 {
-                    text: `Relationship Metadata::`,
+                    text: createAttributeText(schema, "relationshipMetadataAttribute"),
                     children: [
                         {
-                            text: `Contact Frequency:: #[[C List]]: Contact every six months`,
+                            text: createAttributeText(
+                                schema,
+                                "contactFrequencyAttribute",
+                                "#[[C List]]: Contact every six months",
+                            ),
                         },
                         {
-                            text: `Last Contacted::`,
+                            text: createAttributeText(schema, "lastContactedAttribute"),
                         },
                         {
-                            text: `Friends & Family::`,
+                            text: `friends & family::`,
                             children: [
-                                { text: `Partner::` },
-                                { text: `Kid::` },
-                                { text: `Pets::` },
+                                { text: `partner::` },
+                                { text: `kid::` },
+                                { text: `pets::` },
                             ],
                         },
-                        { text: `Birthday::` },
+                        { text: createAttributeText(schema, "birthdayAttribute") },
 
-                        { text: `Fun now for me::` },
-                        { text: `Growing up::` },
-                        { text: `Growing up fun::` },
-                        { text: `Favorite food::` },
-                        { text: `Favorite place to visit::` },
-                        { text: `Ask me about::` },
+                        { text: `fun now for me::` },
+                        { text: `growing up::` },
+                        { text: `growing up fun::` },
+                        { text: `favorite food::` },
+                        { text: `favorite place to visit::` },
+                        { text: `ask me about::` },
                     ],
                 },
                 { text: `---` },
