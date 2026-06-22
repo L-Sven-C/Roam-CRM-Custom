@@ -18,7 +18,7 @@ import { getAgendaPullEntity, getCRMSchema } from "./schema"
 import { UI_LANGUAGE_OPTIONS, t } from "./i18n"
 
 const testing = false
-const version = "v2.9.8"
+const version = "v1.1.1"
 
 const plugin_title = "Roam CRM Custom"
 
