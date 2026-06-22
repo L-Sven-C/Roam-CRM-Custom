@@ -189,6 +189,20 @@ export async function getAllPeople(extensionAPI) {
         })
     }
 
+    function getAttributeBlocksOnPage(pageTitle) {
+        const query = `[:find
+        (pull ?node [:block/string :block/uid])
+        :in $ ?pageTitle
+        :where
+          [?page :node/title ?pageTitle]
+          [?node :block/page ?page]
+          [?node :block/string ?nodeString]
+          [(clojure.string/includes? ?nodeString "::")]
+      ]`
+
+        return window.roamAlphaAPI.q(query, pageTitle).flat()
+    }
+
     function extractAttributes(data, attributeDefinitions) {
         return data.map((item) => {
             // Initialize an object with empty arrays for each keyword
@@ -201,27 +215,26 @@ export async function getAllPeople(extensionAPI) {
                 return acc;
             }, {});
 
-            // Check if lookup exists and is an array
-            if (Array.isArray(item.lookup)) {
-                item.lookup.forEach((lookupItem) => {
-                    if (lookupItem.string) {
-                        const match = lookupItem.string.match(/^([^:]+)::(.*)$/);
-                        if (match) {
-                            const [, key, value] = match;
-                            const trimmedKey = key.trim();
+            const lookup = getAttributeBlocksOnPage(item.title)
 
-                            const personKey = configuredAttributes[trimmedKey];
-                            if (!personKey) return;
+            lookup.forEach((lookupItem) => {
+                if (lookupItem.string) {
+                    const match = lookupItem.string.match(/^([^:]+)::(.*)$/);
+                    if (match) {
+                        const [, key, value] = match;
+                        const trimmedKey = key.trim();
 
-                            // Add the lookup item to the appropriate key
-                            attributes[personKey].push({
-                                ...lookupItem,
-                                value: value.trim()
-                            });
-                        }
+                        const personKey = configuredAttributes[trimmedKey];
+                        if (!personKey) return;
+
+                        // Add the lookup item to the appropriate key
+                        attributes[personKey].push({
+                            ...lookupItem,
+                            value: value.trim()
+                        });
                     }
-                });
-            }
+                }
+            });
 
             // Return the original item with the extracted attributes added
             return {
