@@ -14,6 +14,7 @@ import {
     createAttributeText,
     createHashTagRegex,
     createPageRef,
+    getContactEventPages,
     getCRMSchema,
 } from "./schema"
 import { differenceInYears, parse, isValid, setYear, addYears, startOfDay, differenceInDays } from 'date-fns';
@@ -744,6 +745,92 @@ export async function parseAgendaPull(after, extensionAPI) {
                         cleanUpBlock(block[":block/uid"], blockString)
                     }
                 }
+            }
+        }
+    }
+}
+
+export async function parseContactEventPull(after, extensionAPI) {
+    const schema = getCRMSchema(extensionAPI)
+    const contactEventPages = new Set(getContactEventPages(extensionAPI))
+
+    function getContactEventDate(block) {
+        const pageTitle = block[":block/page"]?.[":node/title"]
+        if (!pageTitle) return null
+
+        const parsedDate = parseStringToDate(pageTitle)
+        if (!parsedDate) return null
+
+        const contactDate = startOfDay(parsedDate)
+        const today = startOfDay(new Date())
+        if (contactDate > today) return null
+
+        return { contactDate, pageTitle }
+    }
+
+    function getLastContactValue(person) {
+        const lastContactBlock = person?.["Last Contacted"]?.[0]
+        const value = lastContactBlock?.value || getAttributeValue(lastContactBlock)
+        return value ? value.replace(/\[|\]/g, "").trim() : ""
+    }
+
+    function shouldUpdateLastContacted(person, contactDate) {
+        const explicitLastContact = parseStringToDate(getLastContactValue(person))
+        if (!explicitLastContact || !isValid(explicitLastContact)) return true
+        return contactDate >= startOfDay(explicitLastContact)
+    }
+
+    if (":block/_refs" in after) {
+        const eventBlocks = after[":block/_refs"].filter((block) => {
+            const refs = block[":block/refs"] || []
+            return refs.length >= 2 && getContactEventDate(block)
+        })
+
+        if (eventBlocks.length > 0) {
+            const people = await getAllPeople(extensionAPI)
+            const latestEventsByPerson = new Map()
+
+            for (const block of eventBlocks) {
+                const eventDate = getContactEventDate(block)
+                if (!eventDate) continue
+
+                const relevantRefs = block[":block/refs"].filter(
+                    (ref) => !contactEventPages.has(ref[":node/title"])
+                )
+
+                for (const ref of relevantRefs) {
+                    const matchingPerson = getDictionaryWithKeyValue(
+                        people,
+                        "title",
+                        ref[":node/title"],
+                    )
+
+                    if (!matchingPerson || !matchingPerson.last_contact_uid) continue
+
+                    const existingEvent = latestEventsByPerson.get(matchingPerson.title)
+                    if (
+                        !existingEvent ||
+                        eventDate.contactDate > existingEvent.contactDate
+                    ) {
+                        latestEventsByPerson.set(matchingPerson.title, {
+                            ...eventDate,
+                            person: matchingPerson,
+                        })
+                    }
+                }
+            }
+
+            for (const event of latestEventsByPerson.values()) {
+                if (!shouldUpdateLastContacted(event.person, event.contactDate)) continue
+
+                await updateBlock({
+                    uid: event.person.last_contact_uid,
+                    text: createAttributeText(
+                        schema,
+                        "lastContactedAttribute",
+                        `[[${event.pageTitle}]]`,
+                    ),
+                })
             }
         }
     }

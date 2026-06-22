@@ -1,6 +1,6 @@
 import displayBirthdays from "./components/birthday_drawer"
 import { showToast } from "./components/toast"
-import { getAllPeople, parseAgendaPull } from "./utils_reminders"
+import { getAllPeople, parseAgendaPull, parseContactEventPull } from "./utils_reminders"
 import { getPageUID, isSecondDateAfter, getExtensionAPISetting } from "./utils"
 import { getEventInfo } from "./utils_gcal"
 import {
@@ -14,11 +14,12 @@ import displayCRMDialog from "./components/clay"
 import { moveFocus, getLastBlockAndFocus } from './utils';
 import EventKeywordSettings from "./components/event_keyword_settings"
 import SchemaSettings from "./components/schema_settings"
-import { getAgendaPullEntity, getCRMSchema } from "./schema"
+import ContactEventPagesSettings from "./components/contact_event_pages_settings"
+import { getAgendaPullEntity, getContactEventPullEntities, getCRMSchema } from "./schema"
 import { UI_LANGUAGE_OPTIONS, t } from "./i18n"
 
 const testing = false
-const version = "v1.1.1"
+const version = "v1.2.0"
 
 const plugin_title = "Roam CRM Custom"
 
@@ -32,7 +33,7 @@ var runners = {
 let googleLoadedHandler
 
 const pullPattern =
-    "[:block/_refs :block/uid :node/title {:block/_refs [{:block/refs[:node/title]} :node/title :block/uid :block/string]}]"
+    "[:block/_refs :block/uid :node/title {:block/_refs [{:block/refs[:node/title]} {:block/page [:node/title]} :node/title :block/uid :block/string]}]"
 
 function versionTextComponent() {
     return React.createElement("div", {}, version)
@@ -47,6 +48,7 @@ function createPanelConfig(extensionAPI, pullFunction) {
     const wrappedIntervalConfig = () => IntervalSettings({ extensionAPI })
     const wrappedEventKeywordConfig = () => EventKeywordSettings({ extensionAPI })
     const wrappedSchemaConfig = () => SchemaSettings({ extensionAPI })
+    const wrappedContactEventPagesConfig = () => ContactEventPagesSettings({ extensionAPI })
     return {
         tabTitle: plugin_title,
         settings: [
@@ -122,6 +124,18 @@ function createPanelConfig(extensionAPI, pullFunction) {
                 description: t(extensionAPI, "settings.intervals.description"),
                 className: "crm-reminders-interval-setting",
                 action: { type: "reactComponent", component: wrappedIntervalConfig },
+            },
+            {
+                id: "contact-events-header",
+                name: t(extensionAPI, "settings.contactEvents.header"),
+                action: { type: "reactComponent", component: headerTextComponent },
+            },
+            {
+                id: "contact-event-pages",
+                name: t(extensionAPI, "settings.contactEvents.name"),
+                description: t(extensionAPI, "settings.contactEvents.description"),
+                className: "crm-contact-event-pages-setting",
+                action: { type: "reactComponent", component: wrappedContactEventPagesConfig },
             },
             {
                 id: "sidebar-button",
@@ -373,8 +387,12 @@ async function onload({ extensionAPI }) {
     const pullFunction = async function a(before, after) {
         await parseAgendaPull(after, extensionAPI)
     }
+    const contactEventPullFunction = async function c(before, after) {
+        await parseContactEventPull(after, extensionAPI)
+    }
     // add to runners so it can be removed later
     runners.pullFunctions.push(pullFunction)
+    runners.pullFunctions.push(contactEventPullFunction)
 
     const panelConfig = createPanelConfig(extensionAPI, pullFunction)
     extensionAPI.settings.panel.create(panelConfig)
@@ -993,6 +1011,14 @@ async function onload({ extensionAPI }) {
         "disable-hotkey": false,
     });
     //MARK: agenda addr
+    for (const entity of getContactEventPullEntities(extensionAPI)) {
+        try {
+            addPullWatch(entity, contactEventPullFunction)
+        } catch (error) {
+            console.warn("Could not add Contact Event Pages pull watch:", entity, error)
+        }
+    }
+
     if (getExtensionAPISetting(extensionAPI, "agenda-addr-setting", false)) {
         const agendaEntity = getAgendaPullEntity(extensionAPI)
         // run the initial agenda addr

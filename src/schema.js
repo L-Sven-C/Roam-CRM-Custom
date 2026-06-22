@@ -1,4 +1,7 @@
 export const CRM_SCHEMA_SETTING_KEY = "crm-schema"
+export const CONTACT_EVENT_PAGES_SETTING_KEY = "contact-event-pages"
+
+export const DEFAULT_CONTACT_EVENT_PAGES = ["call", "1:1", "group", "meal", "date"]
 
 export const DEFAULT_CRM_SCHEMA = {
     personTagPage: "person",
@@ -77,6 +80,20 @@ export function normalizeCRMSchema(schema) {
     }, {})
 }
 
+export function normalizePageList(value, fallback = DEFAULT_CONTACT_EVENT_PAGES) {
+    const rawPages = Array.isArray(value)
+        ? value
+        : typeof value === "string"
+          ? value.split(/[,，\n]/)
+          : fallback
+
+    const pages = rawPages
+        .map((pageTitle) => stripRoamPageSyntax(String(pageTitle).trim()))
+        .filter(Boolean)
+
+    return [...new Set(pages)]
+}
+
 export function getCRMSchema(extensionAPI) {
     const savedSchema = extensionAPI?.settings?.get(CRM_SCHEMA_SETTING_KEY)
     const savedSchemaObject = savedSchema && typeof savedSchema === "object" ? savedSchema : {}
@@ -98,6 +115,25 @@ export function setCRMSchema(extensionAPI, schema) {
     const normalizedSchema = normalizeCRMSchema(schema)
     extensionAPI.settings.set(CRM_SCHEMA_SETTING_KEY, normalizedSchema)
     return normalizedSchema
+}
+
+export function getDefaultContactEventPages(extensionAPI) {
+    const schema = getCRMSchema(extensionAPI)
+    return normalizePageList([
+        schema.callPage,
+        ...DEFAULT_CONTACT_EVENT_PAGES.filter((pageTitle) => pageTitle !== DEFAULT_CRM_SCHEMA.callPage),
+    ])
+}
+
+export function getContactEventPages(extensionAPI) {
+    const savedPages = extensionAPI?.settings?.get(CONTACT_EVENT_PAGES_SETTING_KEY)
+    return normalizePageList(savedPages, getDefaultContactEventPages(extensionAPI))
+}
+
+export function setContactEventPages(extensionAPI, pages) {
+    const normalizedPages = normalizePageList(pages)
+    extensionAPI.settings.set(CONTACT_EVENT_PAGES_SETTING_KEY, normalizedPages)
+    return normalizedPages
 }
 
 export function createAttributeText(schema, key, value = "") {
@@ -128,6 +164,14 @@ export function createHashTagRegex(pageTitle) {
 export function getAgendaPullEntity(extensionAPI) {
     const schema = getCRMSchema(extensionAPI)
     return `[:node/title "${escapeDatalogString(schema.agendaPage)}"]`
+}
+
+export function createPagePullEntity(pageTitle) {
+    return `[:node/title "${escapeDatalogString(stripRoamPageSyntax(pageTitle).trim())}"]`
+}
+
+export function getContactEventPullEntities(extensionAPI) {
+    return getContactEventPages(extensionAPI).map(createPagePullEntity)
 }
 
 export function getDefaultEventKeywords(extensionAPI) {

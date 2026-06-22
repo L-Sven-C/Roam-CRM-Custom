@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.0 - 2026-06-22
+
+- Added configurable Contact Event Pages for automatic `last contacted::` updates from Daily Notes event blocks.
+- Default Contact Event Pages: `call`, `1:1`, `group`, `meal`, `date`.
+
 ## 1.1.1 - 2026-06-22
 
 - Fixed duplicate `contact frequency::` and `last contacted::` creation when fields are nested under `[[contact]]`.

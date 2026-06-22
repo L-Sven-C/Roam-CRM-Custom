@@ -105,6 +105,28 @@ Within the modal you can type a quick message to each person to stay in flow. Th
 
 -   <img src="https://github.com/8bitgentleman/roam-depot-Roam-CRM/raw/main/images/modal%20message.png" width="300"></img>
 
+### Contact Event Pages
+
+Contact Event Pages update `last contacted::` from Daily Notes blocks that reference both a contact event page and a person.
+
+Default event pages:
+
+-   `[[call]]`
+-   `[[1:1]]`
+-   `[[group]]`
+-   `[[meal]]`
+-   `[[date]]`
+
+Example:
+
+```roam
+- [[meal]] with [[Alice]]
+```
+
+When this block is on a Daily Notes page, Alice's `last contacted::` is updated to that Daily Notes date. Future Daily Notes and non-Daily Notes pages are ignored.
+
+You can edit the page list in **Contact Event Pages** settings.
+
 ### Birthday Reminders
 
 -   Birthday reminders happen 14 days before, and on the day of. They remind you that 'Bill Gates turned 46 today.' A and B listers birthday reminders show up in the modal 14 & 7 days before as well as on the day of.
